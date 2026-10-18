@@ -5,6 +5,7 @@ const DEFAULT_CHART := "res://charts/song_01.json"
 const OGG_OVERRIDE := "res://assets/audio/bgm/song_01.ogg"
 const TEST_TONE := "res://assets/audio/bgm/song_01_test.wav"
 const START_LIVES := 3
+const MAX_LIVES := 5
 const RESULTS_META := "run_results"
 
 const WavLib = preload("res://scripts/audio/WavStream.gd")
@@ -142,6 +143,12 @@ func _on_kiss() -> void:
 	if score_tracker:
 		score_tracker.register_hit("kiss")
 	_play_sfx("kiss")
+	if _lives >= MAX_LIVES:
+		return
+	_lives += 1
+	if hud:
+		hud.set_lives(_lives)
+		hud.flash_judge("生命 +1")
 
 
 func _on_song_finished() -> void:

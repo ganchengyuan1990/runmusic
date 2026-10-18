@@ -1,5 +1,5 @@
 extends Node
-## 无头检查跑跳、滑铲、掉坑、亲亲冻结和谱面铺关。
+## 无头检查跑跳、滑铲、掉坑、亲亲冻结、接住布布加命和谱面铺关。
 ## 带 --shots 时再用 OpenGL 视口截恋爱公园。
 ## 作为场景运行（不要 --script），自动加载才在编译期可见。
 
@@ -156,7 +156,66 @@ func _logic() -> bool:
 		return _fail("checkpoint inside pit %s" % spot)
 	GameClock.stop()
 	world.queue_free()
+
+	if not await _kiss_life(host):
+		return false
 	print("logic ok")
+	return true
+
+
+func _kiss_life(host: Node) -> bool:
+	var game: Node = load("res://scenes/game/Game.tscn").instantiate()
+	host.add_child(game)
+	if not GameClock.is_playing:
+		return _fail("kiss life: clock did not start")
+	# 冻住歌曲时间，把人放到第一只布布的脚下，走真正的接住路径。
+	GameClock.soft_freeze()
+	var hit := 13.0
+	var anchor := Vector2(TrackLayout.x_at_time(hit), TrackLayout.stand_y())
+	var player: RunnerController = game.get_node("World/Player")
+	player.position = anchor
+	player.velocity = Vector2.ZERO
+	GameClock.song_time_sec = hit
+	var hud: GameHUD = game.get_node("HUD")
+	var catcher: BuddyCatch = game.get_node("BuddyCatch")
+	var tracker: ScoreTracker = game.get_node("ScoreTracker")
+	if hud.lives_label.text != "生命 3":
+		return _fail("start lives %s" % hud.lives_label.text)
+	var kissed := false
+	for _i in 4:
+		await get_tree().process_frame
+		if hud.lives_label.text == "生命 4":
+			kissed = true
+			break
+	if not kissed:
+		return _fail("kiss should grant life, got %s kisses %s" % [hud.lives_label.text, tracker.kiss_count])
+	if hud.judge_label.text != "生命 +1":
+		return _fail("life flash %s" % hud.judge_label.text)
+	if tracker.kiss_count != 1:
+		return _fail("kiss score %s" % tracker.kiss_count)
+	if not hud.kiss_overlay.visible:
+		return _fail("kiss overlay missing")
+	var lives_after_kiss := hud.lives_label.text
+	catcher.brushed.emit()
+	await get_tree().process_frame
+	if hud.lives_label.text != lives_after_kiss:
+		return _fail("brush changed lives to %s" % hud.lives_label.text)
+	catcher.caught.emit()
+	await get_tree().process_frame
+	if hud.lives_label.text != "生命 5":
+		return _fail("second kiss lives %s" % hud.lives_label.text)
+	hud.flash_judge("")
+	catcher.caught.emit()
+	await get_tree().process_frame
+	if hud.lives_label.text != "生命 5":
+		return _fail("life cap %s" % hud.lives_label.text)
+	if hud.judge_label.text == "生命 +1":
+		return _fail("capped kiss still flashed a life")
+	if tracker.kiss_count != 3:
+		return _fail("capped kiss dropped score %s" % tracker.kiss_count)
+	GameClock.stop()
+	game.queue_free()
+	print("kiss life ok")
 	return true
 
 
