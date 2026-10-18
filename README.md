@@ -50,7 +50,7 @@ Title → **校准 Offset**。
 | 一二 | 玩家 | 白熊猫，圆头、黑耳、黑眼圈 |
 | 布布 | 可接住的搭档 | 棕熊猫，从右侧靠近 |
 
-一二和布布用的是 `assets/characters/` 里的 128×128 占位图（见同目录 `MANIFEST.md`），不是商业作品的官方立绘。名字用在界面和说明里；授权由项目方自行处理。换成正式立绘时，覆盖同名文件即可：`yier_idle.png`、`yier_run_01.png`、`yier_run_02.png`、`yier_jump.png`、`yier_slide.png`、`bubu_idle.png`、`bubu_approach.png`、`vfx_heart.png`。
+一二和布布用的是 `assets/characters/` 里的 128×128 手绘占位图（见同目录 `MANIFEST.md`），不是商业作品的官方立绘。名字用在界面和说明里；授权由项目方自行处理。换成正式立绘时，覆盖同名文件即可：`yier_idle.png`、`yier_run_01.png`、`yier_run_02.png`、`yier_jump.png`、`yier_slide.png`、`bubu_idle.png`、`bubu_approach.png`、`vfx_heart.png`。
 
 ### 美术方向 C
 
