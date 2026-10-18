@@ -10,7 +10,8 @@
   "approachSec": 1.5,
   "windowsMs": {
     "perfect": 50,
-    "good": 100
+    "good": 100,
+    "buddy": 250
   },
   "notes": [
     {
@@ -79,40 +80,9 @@
       "type": "block"
     },
     {
-      "t": 8.5,
-      "lane": 0,
-      "type": "slide"
-    },
-    {
-      "t": 9.0,
-      "lane": 2,
-      "type": "block"
-    },
-    {
-      "t": 9.5,
-      "lane": 1,
-      "type": "hold",
-      "duration": 0.5
-    },
-    {
       "t": 10.0,
-      "lane": 2,
-      "type": "slide"
-    },
-    {
-      "t": 10.5,
       "lane": 0,
-      "type": "jump"
-    },
-    {
-      "t": 11.0,
-      "lane": 1,
-      "type": "jump"
-    },
-    {
-      "t": 11.5,
-      "lane": 0,
-      "type": "slide"
+      "type": "buddy"
     },
     {
       "t": 12.0,
@@ -200,39 +170,9 @@
       "type": "jump"
     },
     {
-      "t": 20.5,
-      "lane": 0,
-      "type": "slide"
-    },
-    {
-      "t": 21.0,
-      "lane": 2,
-      "type": "block"
-    },
-    {
-      "t": 21.5,
-      "lane": 1,
-      "type": "jump"
-    },
-    {
       "t": 22.0,
       "lane": 2,
-      "type": "slide"
-    },
-    {
-      "t": 22.5,
-      "lane": 0,
-      "type": "jump"
-    },
-    {
-      "t": 23.0,
-      "lane": 1,
-      "type": "jump"
-    },
-    {
-      "t": 23.5,
-      "lane": 0,
-      "type": "slide"
+      "type": "buddy"
     },
     {
       "t": 24.0,
@@ -342,39 +282,9 @@
       "type": "slide"
     },
     {
-      "t": 34.5,
-      "lane": 0,
-      "type": "jump"
-    },
-    {
-      "t": 35.0,
-      "lane": 1,
-      "type": "jump"
-    },
-    {
-      "t": 35.5,
-      "lane": 0,
-      "type": "slide"
-    },
-    {
       "t": 36.0,
-      "lane": 2,
-      "type": "block"
-    },
-    {
-      "t": 36.5,
       "lane": 1,
-      "type": "jump"
-    },
-    {
-      "t": 37.0,
-      "lane": 2,
-      "type": "slide"
-    },
-    {
-      "t": 37.5,
-      "lane": 0,
-      "type": "jump"
+      "type": "buddy"
     },
     {
       "t": 38.0,
@@ -482,40 +392,9 @@
       "type": "block"
     },
     {
-      "t": 48.5,
-      "lane": 1,
-      "type": "jump"
-    },
-    {
-      "t": 49.0,
-      "lane": 2,
-      "type": "slide"
-    },
-    {
-      "t": 49.5,
-      "lane": 0,
-      "type": "hold",
-      "duration": 0.5
-    },
-    {
       "t": 50.0,
-      "lane": 1,
-      "type": "jump"
-    },
-    {
-      "t": 50.5,
       "lane": 0,
-      "type": "slide"
-    },
-    {
-      "t": 51.0,
-      "lane": 2,
-      "type": "block"
-    },
-    {
-      "t": 51.5,
-      "lane": 1,
-      "type": "jump"
+      "type": "buddy"
     },
     {
       "t": 52.0,

@@ -41,7 +41,7 @@ horizontal_alignment = 1
 
 [node name="Hint" type="Label" parent="CalibrationUI/VBox"]
 layout_mode = 2
-text = "感觉鼓点偏晚 → 增大偏移；偏早 → 减小"
+text = "横版 1280×720。感觉嘀声偏晚 → 增大偏移；偏早 → 减小"
 horizontal_alignment = 1
 autowrap_mode = 2
 

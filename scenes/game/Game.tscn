@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/GameRoot.gd" id="1_game"]
 [ext_resource type="PackedScene" path="res://scenes/game/Player.tscn" id="2_player"]
@@ -9,44 +9,85 @@
 [ext_resource type="Script" path="res://scripts/gameplay/Judge.gd" id="7_judge"]
 [ext_resource type="Script" path="res://scripts/gameplay/ScoreTracker.gd" id="8_score"]
 [ext_resource type="Script" path="res://scripts/input/InputRouter.gd" id="9_input"]
+[ext_resource type="PackedScene" path="res://scenes/game/Buddy.tscn" id="10_buddy"]
+[ext_resource type="Script" path="res://scripts/gameplay/BuddyCatch.gd" id="11_buddy"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
 
 [node name="World" type="Node2D" parent="."]
 
+[node name="Sky" type="ColorRect" parent="World"]
+offset_left = -900.0
+offset_top = -420.0
+offset_right = 1100.0
+offset_bottom = 420.0
+color = Color(1, 0.964706, 0.909804, 1)
+
 [node name="LaneGuide" type="Node2D" parent="World"]
 
 [node name="Lane0" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -140.0
-offset_top = -360.0
-offset_right = -100.0
-offset_bottom = 360.0
-color = Color(0.15, 0.15, 0.2, 0.4)
+offset_left = -700.0
+offset_top = -200.0
+offset_right = 980.0
+offset_bottom = -60.0
+color = Color(0.960784, 0.901961, 0.827451, 1)
 
 [node name="Lane1" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -20.0
-offset_top = -360.0
-offset_right = 20.0
-offset_bottom = 360.0
-color = Color(0.15, 0.15, 0.2, 0.4)
+offset_left = -700.0
+offset_top = -40.0
+offset_right = 980.0
+offset_bottom = 100.0
+color = Color(0.972549, 0.921569, 0.854902, 1)
 
 [node name="Lane2" type="ColorRect" parent="World/LaneGuide"]
-offset_left = 100.0
-offset_top = -360.0
-offset_right = 140.0
-offset_bottom = 360.0
-color = Color(0.15, 0.15, 0.2, 0.4)
+offset_left = -700.0
+offset_top = 120.0
+offset_right = 980.0
+offset_bottom = 260.0
+color = Color(0.960784, 0.901961, 0.827451, 1)
+
+[node name="Div0" type="ColorRect" parent="World/LaneGuide"]
+offset_left = -700.0
+offset_top = -200.0
+offset_right = 980.0
+offset_bottom = -198.0
+color = Color(0.831373, 0.768627, 0.690196, 1)
+
+[node name="Div1" type="ColorRect" parent="World/LaneGuide"]
+offset_left = -700.0
+offset_top = -60.0
+offset_right = 980.0
+offset_bottom = -58.0
+color = Color(0.831373, 0.768627, 0.690196, 1)
+
+[node name="Div2" type="ColorRect" parent="World/LaneGuide"]
+offset_left = -700.0
+offset_top = 100.0
+offset_right = 980.0
+offset_bottom = 102.0
+color = Color(0.831373, 0.768627, 0.690196, 1)
+
+[node name="Div3" type="ColorRect" parent="World/LaneGuide"]
+offset_left = -700.0
+offset_top = 260.0
+offset_right = 980.0
+offset_bottom = 262.0
+color = Color(0.831373, 0.768627, 0.690196, 1)
 
 [node name="JudgementLine" type="ColorRect" parent="World"]
-offset_left = -160.0
-offset_top = -2.0
-offset_right = 160.0
-offset_bottom = 2.0
-color = Color(1, 1, 1, 0.5)
+offset_left = -360.0
+offset_top = -210.0
+offset_right = -352.0
+offset_bottom = 270.0
+color = Color(0.356863, 0.552941, 0.937255, 1)
 
 [node name="Player" parent="World" instance=ExtResource("2_player")]
-position = Vector2(0, 0)
+position = Vector2(-356, 30)
+
+[node name="Buddy" parent="World" instance=ExtResource("10_buddy")]
+visible = false
+position = Vector2(920, 30)
 
 [node name="ObstaclePool" type="Node" parent="World"]
 script = ExtResource("5_pool")
@@ -61,7 +102,7 @@ pool_path = NodePath("../ObstaclePool")
 [node name="ObstacleRoot" type="Node2D" parent="World"]
 
 [node name="Camera2D" type="Camera2D" parent="World"]
-position = Vector2(0, -80)
+position = Vector2(0, 0)
 
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="."]
 bus = &"Master"
@@ -79,5 +120,11 @@ script = ExtResource("8_score")
 script = ExtResource("9_input")
 runner_path = NodePath("../World/Player")
 judge_path = NodePath("../Judge")
+
+[node name="BuddyCatch" type="Node" parent="."]
+script = ExtResource("11_buddy")
+runner_path = NodePath("../World/Player")
+buddy_path = NodePath("../World/Buddy")
+hud_path = NodePath("../HUD")
 
 [node name="HUD" parent="." instance=ExtResource("3_hud")]

@@ -77,6 +77,12 @@ def build_sfx(kind: str) -> list[float]:
         samples = _silence(0.12)
         _add_tone(samples, 0.0, 880.0, 0.40, 0.10, 34.0)
         return samples
+    if kind == "kiss":
+        samples = _silence(0.28)
+        _add_tone(samples, 0.0, 740.0, 0.28, 0.08, 40.0)
+        _add_tone(samples, 0.09, 988.0, 0.32, 0.12, 50.0)
+        _add_tone(samples, 0.16, 1318.0, 0.18, 0.10, 40.0)
+        return samples
     samples = _silence(0.16)
     _add_tone(samples, 0.0, 150.0, 0.50, 0.14, 22.0)
     _add_tone(samples, 0.0, 90.0, 0.25, 0.12, 18.0)
@@ -109,12 +115,20 @@ def build_notes() -> list[dict]:
         notes.append(note)
         index += 1
         t = 2.0 + index * BEAT
+    # 布布落在障碍空档里，靠近前后 1.6 秒不再排障碍。
+    buddy_times = [10.0, 22.0, 36.0, 50.0]
+    buddy_lanes = [0, 2, 1, 0]
+    gap = 1.6
+    notes = [n for n in notes if all(abs(n["t"] - b) >= gap - 1e-6 for b in buddy_times)]
+    for hit, lane in zip(buddy_times, buddy_lanes):
+        notes.append({"t": hit, "lane": lane, "type": "buddy"})
+    notes.sort(key=lambda n: (n["t"], n["lane"]))
     return notes
 
 
 def main() -> None:
     _write_wav(BGM_PATH, build_bgm())
-    for name in ("perfect", "good", "miss"):
+    for name in ("perfect", "good", "miss", "kiss"):
         _write_wav(SFX_DIR / f"{name}.wav", build_sfx(name))
     notes = build_notes()
     chart = {
@@ -127,7 +141,7 @@ def main() -> None:
         "offsetMs": 0,
         "durationSec": DURATION,
         "approachSec": 1.5,
-        "windowsMs": {"perfect": 50, "good": 100},
+        "windowsMs": {"perfect": 50, "good": 100, "buddy": 250},
         "notes": notes,
     }
     CHART_PATH.write_text(json.dumps(chart, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

@@ -1,7 +1,7 @@
 extends Node
 ## 加载 / 校验 JSON 谱面；提供按时间查询的音符队列。
 
-const ALLOWED_TYPES := ["jump", "slide", "block", "hold"]
+const ALLOWED_TYPES := ["jump", "slide", "block", "hold", "buddy"]
 const SCHEMA_VERSION := 1
 
 ## 当前已加载谱面（Dictionary）；未加载时为空。

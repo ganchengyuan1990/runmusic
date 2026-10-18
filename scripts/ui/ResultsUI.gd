@@ -21,9 +21,10 @@ func _ready() -> void:
 
 func show_results(data: Dictionary) -> void:
 	if _score_label:
-		_score_label.text = "分数：%d" % int(data.get("score", 0))
+		_score_label.text = "亲亲 ×%d" % int(data.get("kisses", 0))
+		_score_label.add_theme_color_override("font_color", Color("#E85D7A"))
 	if _combo_label:
-		_combo_label.text = "最大连击：%d" % int(data.get("max_combo", 0))
+		_combo_label.text = "分数：%d    最大连击：%d" % [int(data.get("score", 0)), int(data.get("max_combo", 0))]
 	if _stats_label:
 		_stats_label.text = "Perfect %d  |  Good %d  |  Miss %d  |  躲开 %d  |  生命 %d" % [
 			int(data.get("perfect", 0)),

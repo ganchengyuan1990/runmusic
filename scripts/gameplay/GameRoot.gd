@@ -18,6 +18,7 @@ const WavLib = preload("res://scripts/audio/WavStream.gd")
 @onready var score_tracker: ScoreTracker = $ScoreTracker
 @onready var input_router: InputRouter = $InputRouter
 @onready var hud: GameHUD = $HUD
+@onready var buddy_catch = $BuddyCatch
 
 var _lives: int = START_LIVES
 var _ended: bool = false
@@ -37,6 +38,8 @@ func _ready() -> void:
 	GameClock.bind_player(music)
 	if score_tracker and hud:
 		score_tracker.score_changed.connect(hud.set_score)
+		score_tracker.kisses_changed.connect(hud.set_kisses)
+		hud.set_kisses(0)
 	if judge:
 		judge.judged.connect(_on_judged)
 		judge.reset()
@@ -44,6 +47,10 @@ func _ready() -> void:
 		score_tracker.reset()
 	if spawner:
 		spawner.reset_for_chart()
+	if buddy_catch:
+		buddy_catch.reset_for_chart()
+		if not buddy_catch.caught.is_connected(_on_kiss):
+			buddy_catch.caught.connect(_on_kiss)
 	_lives = START_LIVES
 	if hud:
 		hud.set_lives(_lives)
@@ -88,7 +95,7 @@ func _load_bgm() -> void:
 
 func _load_sfx() -> void:
 	sfx.volume_db = Settings.sfx_volume_db if Settings else 0.0
-	for name in ["perfect", "good", "miss"]:
+	for name in ["perfect", "good", "miss", "kiss"]:
 		var path := "res://assets/audio/sfx/%s.wav" % name
 		var stream := WavLib.load_file(path)
 		if stream:
@@ -110,12 +117,22 @@ func _on_judged(result: String, note: Dictionary, _delta_ms: float) -> void:
 	if hud:
 		hud.flash_judge(result)
 	_play_sfx(result)
+	if result == "kiss":
+		return
 	if result == "miss" and str(note.get("type", "")) == "block":
 		_lives = maxi(_lives - 1, 0)
 		if hud:
 			hud.set_lives(_lives)
 		if _lives <= 0:
 			_end_run()
+
+
+func _on_kiss() -> void:
+	if _ended:
+		return
+	if score_tracker:
+		score_tracker.register_hit("kiss")
+	_play_sfx("kiss")
 
 
 func _on_song_finished() -> void:

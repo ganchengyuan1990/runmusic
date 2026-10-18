@@ -29,5 +29,6 @@ func _ready() -> void:
 			"miss": 0,
 			"dodge": 0,
 			"lives": 0,
+			"kisses": 0,
 		}
 	_ui.show_results(data)

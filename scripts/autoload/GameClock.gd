@@ -33,10 +33,43 @@ var _time_delay: float = 0.0
 var _empty_run: bool = false
 var _empty_origin_usec: int = 0
 var _finish_armed: bool = false
+## 亲亲时的短暂停：歌和 song_time 都站住，点一下或到时再走。
+var _soft_frozen: bool = false
+
+
+func is_soft_frozen() -> bool:
+	return _soft_frozen
+
+
+## 亲亲：暂停播放，song_time 停在这一拍。不走后台暂停那条路。
+func soft_freeze() -> void:
+	if _soft_frozen or not is_playing:
+		return
+	_soft_frozen = true
+	if _music_player and not _empty_run:
+		_music_player.stream_paused = true
+
+
+func soft_resume() -> void:
+	if not _soft_frozen:
+		return
+	_soft_frozen = false
+	if _empty_run:
+		var elapsed := song_time_sec + _offset_sec()
+		_empty_origin_usec = Time.get_ticks_usec() - int(maxf(elapsed, 0.0) * 1_000_000.0)
+		return
+	if _music_player:
+		_music_player.stream_paused = false
+		if sync_mode == SyncMode.SYSTEM_CLOCK:
+			var raw := song_time_sec + _offset_sec()
+			_time_begin_usec = Time.get_ticks_usec()
+			_time_delay = -raw
+		else:
+			_last_song_time = song_time_sec + _offset_sec()
 
 
 func _process(delta: float) -> void:
-	if not is_playing:
+	if not is_playing or _soft_frozen:
 		return
 	if _empty_run:
 		var wall := (Time.get_ticks_usec() - _empty_origin_usec) / 1_000_000.0
@@ -107,6 +140,7 @@ func stop() -> void:
 	is_playing = false
 	_empty_run = false
 	_finish_armed = false
+	_soft_frozen = false
 	if _music_player and _music_player.playing:
 		_music_player.stop()
 	song_time_sec = 0.0
