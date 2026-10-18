@@ -1,6 +1,7 @@
 extends Control
 ## 听歌打点。播放音频，按键把公园音符写到时间轴上，导出 ChartLoader 能读的 JSON。
 ## 不改游戏键位。试玩只武装一次预览谱，标题里的「开始游戏」仍进 song_01。
+## 试玩里一二的横坐标跟歌曲走，点在时刻 T 的音符会在这一拍落到她脚下。
 
 const DraftLib = preload("res://scripts/tools/ChartDraft.gd")
 const TimelineLib = preload("res://scripts/tools/ChartTimeline.gd")
@@ -10,7 +11,7 @@ const KEYS_PATH := "user://chart_tap.cfg"
 const PREVIEW_PATH := "user://charts/preview.json"
 const PEAK_BUCKETS := 1024
 
-const HELP_TEXT := "空格 播放/暂停    1 矮丛  2 花门  3 坑  4 平台  5 布布（点下方按钮再按键可改）\nZ 撤销    X 删除播放头附近    Tab 改类型    [ ] 调宽度    ← → 移动    Shift+← → 微调选中音符\n滚轮缩放时间轴。点击空白跳转，点击音符选中。偏移 ms 写入谱面 offsetMs，不改变你点下去的时刻，平时保持 0。"
+const HELP_TEXT := "空格 播放/暂停    1 矮丛  2 花门  3 坑  4 平台  5 布布（点下方按钮再按键可改）\nZ 撤销    X 删除播放头附近    Tab 改类型    [ ] 调宽度    ← → 移动    Shift+← → 微调选中音符\n滚轮缩放时间轴。点击空白跳转，点击音符选中。偏移 ms 写入谱面 offsetMs，不改变你点下去的时刻，平时保持 0。试玩时一二跟着歌自动跑，跳和滑铲仍要自己按。"
 
 var draft: ChartDraft
 var last_error := ""
@@ -424,6 +425,7 @@ func _build_ui() -> void:
 	export_button.pressed.connect(_on_export)
 	files.add_child(export_button)
 	var preview := _button("试玩")
+	preview.tooltip_text = "一二跟着歌曲自动往右跑，跳和滑铲仍要自己按。不用按住右，打点才对得上。"
 	preview.pressed.connect(_on_preview)
 	files.add_child(preview)
 

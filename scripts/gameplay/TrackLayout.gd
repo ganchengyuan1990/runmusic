@@ -3,6 +3,7 @@ class_name TrackLayout
 ## 恋爱公园侧视。一二在地面上自由跑，相机跟着走。
 ## 谱面时间 t 对应世界横坐标：x = START_X + t * px_per_sec()。
 ## 按住右跑且速度等于 px_per_sec 时，会在音符时刻到达该障碍。
+## 打点试玩不靠按住右：人的横坐标直接锁在 x_at_time(歌曲时间) 上。
 
 const GROUND_Y := 248.0
 const FEET_OFFSET := 48.0

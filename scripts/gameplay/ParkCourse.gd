@@ -91,9 +91,9 @@ func _process(_delta: float) -> void:
 func _physics_process(_delta: float) -> void:
 	if not _built or _player == null or not GameClock.is_playing:
 		return
-	if GameClock.is_soft_frozen() or _player.is_fallen():
-		return
-	_grade_passes()
+	if not GameClock.is_soft_frozen() and not _player.is_fallen():
+		_grade_passes()
+	_skate_pit_recovery()
 
 
 func _spawn_due(song_t: float, player_x: float) -> void:
@@ -160,6 +160,22 @@ func _grade_passes() -> void:
 				when = song_t
 			if _judge:
 				_judge.submit_clear(int(h["index"]), when)
+
+
+## 试玩锁在歌曲时间上。掉坑重生后如果这一拍还在缺口里，先贴着地面跟着歌滑过去，
+## 免得同一拍把命扣光，也免得为了落地而把人拉回检查点、和打点对不齐。
+func _skate_pit_recovery() -> void:
+	if _player == null or not _player.clock_locked:
+		return
+	if _player.recovery_left() <= 0.0:
+		return
+	if GameClock.is_soft_frozen() or _player.is_fallen():
+		return
+	if not _near_pit(_player.position.x, 6.0):
+		return
+	_player.position.y = Layout.stand_y()
+	_player.velocity.y = 0.0
+	_player.keep_recovery(0.25)
 
 
 func _on_respawned() -> void:
