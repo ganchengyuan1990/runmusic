@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/HUD.gd" id="1_hud"]
+[ext_resource type="Texture2D" path="res://assets/characters/vfx_heart.png" id="2_heart"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("1_hud")
@@ -113,45 +114,43 @@ theme_override_font_sizes/font_size = 48
 text = "啾"
 horizontal_alignment = 1
 
-[node name="Heart" type="Label" parent="Root/KissOverlay"]
+[node name="Heart" type="TextureRect" parent="Root/KissOverlay"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -24.0
-offset_top = -150.0
-offset_right = 24.0
-offset_bottom = -102.0
+offset_left = -32.0
+offset_top = -168.0
+offset_right = 32.0
+offset_bottom = -104.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(1, 0.478431, 0.713725, 1)
-theme_override_font_sizes/font_size = 40
-text = "♥"
-horizontal_alignment = 1
+texture = ExtResource("2_heart")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="SparkL" type="Label" parent="Root/KissOverlay"]
+[node name="SparkL" type="TextureRect" parent="Root/KissOverlay"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -90.0
-offset_top = -170.0
-offset_right = -60.0
-offset_bottom = -140.0
+offset_left = -96.0
+offset_top = -188.0
+offset_right = -64.0
+offset_bottom = -156.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(1, 0.717647, 0.772549, 1)
-theme_override_font_sizes/font_size = 18
-text = "♥"
-horizontal_alignment = 1
+texture = ExtResource("2_heart")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="SparkR" type="Label" parent="Root/KissOverlay"]
+[node name="SparkR" type="TextureRect" parent="Root/KissOverlay"]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -159,13 +158,12 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = 64.0
-offset_top = -180.0
-offset_right = 94.0
-offset_bottom = -150.0
+offset_top = -196.0
+offset_right = 88.0
+offset_bottom = -172.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_colors/font_color = Color(1, 0.717647, 0.772549, 1)
-theme_override_font_sizes/font_size = 16
-text = "♥"
-horizontal_alignment = 1
+texture = ExtResource("2_heart")
+expand_mode = 1
+stretch_mode = 5

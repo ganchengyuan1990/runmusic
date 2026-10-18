@@ -6,6 +6,8 @@ signal caught
 signal brushed
 
 const Layout = preload("res://scripts/gameplay/TrackLayout.gd")
+const BUDDY_APPROACH := preload("res://assets/characters/bubu_approach.png")
+const BUDDY_IDLE := preload("res://assets/characters/bubu_idle.png")
 const KISS_SEC := 0.6
 const DEFAULT_WINDOW_MS := 250.0
 const SIDE_BY_SIDE := 110.0
@@ -108,6 +110,7 @@ func _tick_approach() -> void:
 		u = clampf((song_t - (hit - approach)) / approach, 0.0, 1.6)
 	_buddy.visible = true
 	_buddy.scale = Vector2.ONE
+	_set_buddy_texture(BUDDY_APPROACH)
 	_buddy.position = Vector2(lerpf(Layout.SPAWN_X, Layout.HIT_X, u), Layout.LANE_Y[lane])
 	var window := _window_ms / 1000.0
 	if song_t >= hit - window and song_t <= hit + window:
@@ -137,6 +140,7 @@ func _begin_kiss(lane: int) -> void:
 func _present_kiss() -> void:
 	if _buddy:
 		_buddy.visible = true
+		_set_buddy_texture(BUDDY_IDLE)
 		_buddy.position = Vector2(Layout.RUNNER_X + SIDE_BY_SIDE, _kiss_lane_y)
 		_buddy.scale = Vector2(KISS_SCALE, KISS_SCALE)
 	_set_runner_scale(KISS_SCALE)
@@ -149,11 +153,20 @@ func _end_kiss() -> void:
 	if _buddy:
 		_buddy.visible = false
 		_buddy.scale = Vector2.ONE
+		_set_buddy_texture(BUDDY_APPROACH)
 	if _hud:
 		_hud.show_kiss(false)
 	if GameClock.is_soft_frozen():
 		GameClock.soft_resume()
 	_cursor += 1
+
+
+func _set_buddy_texture(texture: Texture2D) -> void:
+	if _buddy == null:
+		return
+	var sprite := _buddy.get_node_or_null("Sprite") as Sprite2D
+	if sprite and sprite.texture != texture:
+		sprite.texture = texture
 
 
 func _set_runner_scale(amount: float) -> void:

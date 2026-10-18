@@ -1,7 +1,7 @@
 extends CharacterBody2D
 class_name RunnerController
-## 一二（白熊猫）。变道改 Y（上/下轨），跳是相对本轨的上弧，滑铲把身体压矮。
-## X 固定在判定线，不跟着障碍走。正式跑步帧还没做，这里只摆占位。
+## 一二（白熊猫）。变道改 Y（上/下轨），跳是相对本轨的上弧。
+## 跑步 / 跳 / 滑切 AnimatedSprite2D 的同名动画。X 固定在判定线。
 
 signal lane_changed(lane: int)
 signal jumped
@@ -9,8 +9,6 @@ signal slid
 
 const Layout = preload("res://scripts/gameplay/TrackLayout.gd")
 const LANE_COUNT := 3
-const SLIDE_HEIGHT_RATIO := 0.45
-const VISUAL_FOOT := 48.0
 
 @export var lane_switch_speed: float = 12.0
 @export var jump_duration: float = 0.35
@@ -25,8 +23,9 @@ var _action_duration: float = 0.0
 var _target_y: float = 0.0
 var _shown_y: float = 0.0
 var _hop: float = 0.0
+var _action_fresh: bool = false
 
-@onready var _visual: Node2D = $Visual
+@onready var _sprite: AnimatedSprite2D = $Visual/Sprite
 
 
 func _ready() -> void:
@@ -35,20 +34,27 @@ func _ready() -> void:
 	_shown_y = _target_y
 	position.x = Layout.RUNNER_X
 	position.y = _shown_y
-	_reset_visual()
+	_play_pose("idle")
 
 
 func _physics_process(delta: float) -> void:
 	var blend := clampf(lane_switch_speed * delta, 0.0, 1.0)
 	_shown_y = lerpf(_shown_y, _target_y, blend)
+	# 无头探针里单帧 delta 可能超过整段跳跃。刚按下的那一帧最多只消耗
+	# 四分之一时长，保证跳/滑的姿势至少能画出来。
+	var step := delta
+	if _action_fresh:
+		step = minf(delta, maxf(_action_duration, 0.0001) * 0.25)
+		_action_fresh = false
 	if _is_jumping:
-		_tick_jump(delta)
+		_tick_jump(step)
 	elif _is_sliding:
-		_tick_slide(delta)
+		_tick_slide(step)
 	else:
 		_hop = 0.0
 	position.x = Layout.RUNNER_X
 	position.y = _shown_y + _hop
+	_update_pose()
 
 
 func _tick_jump(delta: float) -> void:
@@ -63,19 +69,25 @@ func _tick_jump(delta: float) -> void:
 
 func _tick_slide(delta: float) -> void:
 	_action_timer = maxf(_action_timer - delta, 0.0)
-	_apply_slide_pose()
 	if _action_timer <= 0.0:
 		_finish_action()
 
 
-func _apply_slide_pose() -> void:
-	_visual.scale = Vector2(1.05, SLIDE_HEIGHT_RATIO)
-	_visual.position.y = (1.0 - SLIDE_HEIGHT_RATIO) * VISUAL_FOOT
+func _update_pose() -> void:
+	if _is_jumping:
+		_play_pose("jump")
+	elif _is_sliding:
+		_play_pose("slide")
+	elif GameClock.is_soft_frozen() or not GameClock.is_playing:
+		_play_pose("idle")
+	else:
+		_play_pose("run")
 
 
-func _reset_visual() -> void:
-	_visual.scale = Vector2.ONE
-	_visual.position = Vector2.ZERO
+func _play_pose(anim: String) -> void:
+	if _sprite == null or _sprite.animation == anim:
+		return
+	_sprite.play(anim)
 
 
 func _finish_action() -> void:
@@ -83,7 +95,6 @@ func _finish_action() -> void:
 	_is_sliding = false
 	_action_timer = 0.0
 	_hop = 0.0
-	_reset_visual()
 
 
 func move_lane(delta_lane: int) -> void:
@@ -101,6 +112,8 @@ func try_jump() -> void:
 	_is_jumping = true
 	_action_duration = jump_duration
 	_action_timer = jump_duration
+	_action_fresh = true
+	_update_pose()
 	jumped.emit()
 
 
@@ -111,7 +124,8 @@ func try_slide() -> void:
 	_action_duration = slide_duration
 	_action_timer = slide_duration
 	_hop = 0.0
-	_apply_slide_pose()
+	_action_fresh = true
+	_update_pose()
 	slid.emit()
 
 

@@ -7,7 +7,7 @@ class_name GameHUD
 @onready var lives_label: Label = $Root/LivesLabel
 @onready var judge_label: Label = $Root/JudgeLabel
 @onready var kiss_overlay: Control = $Root/KissOverlay
-@onready var heart: Label = $Root/KissOverlay/Heart
+@onready var heart: TextureRect = $Root/KissOverlay/Heart
 
 var _flash_left: float = 0.0
 var _kiss_time: float = 0.0
@@ -17,8 +17,8 @@ func _process(delta: float) -> void:
 	if kiss_overlay and kiss_overlay.visible and heart:
 		_kiss_time += delta
 		var bob := sin(_kiss_time * 6.0) * 8.0
-		heart.offset_top = -150.0 + bob
-		heart.offset_bottom = -102.0 + bob
+		heart.offset_top = -168.0 + bob
+		heart.offset_bottom = -104.0 + bob
 	if _flash_left <= 0.0:
 		return
 	_flash_left = maxf(_flash_left - delta, 0.0)
