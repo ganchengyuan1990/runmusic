@@ -3,10 +3,10 @@ class_name InputRouter
 ## 键盘 / 触屏 → 统一 Action（带 stamped 时间）。
 ## Judge 应用「按下瞬间的 song_time」，避免抬起才判定。
 ##
-## 触屏（Phase 0）：
-## - 点击左 1/3：向左变道；右 1/3：向右变道
-## - 中间上半：跳；中间下半：滑
-## - 滑动：横向变道，上滑跳，下滑滑
+## 触屏（横版侧视）：
+## - 左半上：上一条赛道；左半下：下一条赛道
+## - 右半上：跳；右半下：滑铲
+## - 滑动：上滑跳，下滑滑铲，左滑上轨，右滑下轨
 ## 桌面鼠标左键单击走同一套分区，便于没有触摸屏时试手感。
 
 signal action_pressed(action: String, song_time: float)
@@ -33,6 +33,8 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if GameClock.is_soft_frozen():
+		return
 	if event is InputEventScreenTouch or event is InputEventScreenDrag:
 		handle_touch(event)
 		get_viewport().set_input_as_handled()
@@ -105,15 +107,15 @@ func _consider_swipe(pos: Vector2) -> void:
 		return
 	_swipe_fired = true
 	var stamped := GameClock.song_time_sec
-	if absf(delta.x) >= absf(delta.y):
-		if delta.x < 0.0:
-			_route_lane(-1, stamped)
+	if absf(delta.y) >= absf(delta.x):
+		if delta.y < 0.0:
+			_route_jump(stamped)
 		else:
-			_route_lane(1, stamped)
-	elif delta.y < 0.0:
-		_route_jump(stamped)
+			_route_slide(stamped)
+	elif delta.x < 0.0:
+		_route_lane(-1, stamped)
 	else:
-		_route_slide(stamped)
+		_route_lane(1, stamped)
 
 
 func _route_tap(pos: Vector2) -> void:
@@ -121,11 +123,13 @@ func _route_tap(pos: Vector2) -> void:
 	if size.x <= 1.0 or size.y <= 1.0:
 		size = Vector2(1280, 720)
 	var stamped := GameClock.song_time_sec
-	if pos.x < size.x / 3.0:
+	var on_left := pos.x < size.x * 0.5
+	var on_upper := pos.y < size.y * 0.5
+	if on_left and on_upper:
 		_route_lane(-1, stamped)
-	elif pos.x > size.x * 2.0 / 3.0:
+	elif on_left:
 		_route_lane(1, stamped)
-	elif pos.y < size.y * 0.5:
+	elif on_upper:
 		_route_jump(stamped)
 	else:
 		_route_slide(stamped)

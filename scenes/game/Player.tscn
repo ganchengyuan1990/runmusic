@@ -1,9 +1,52 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/RunnerController.gd" id="1_runner"]
+[ext_resource type="Texture2D" path="res://assets/characters/yier_idle.png" id="2_idle"]
+[ext_resource type="Texture2D" path="res://assets/characters/yier_run_01.png" id="3_run1"]
+[ext_resource type="Texture2D" path="res://assets/characters/yier_run_02.png" id="4_run2"]
+[ext_resource type="Texture2D" path="res://assets/characters/yier_jump.png" id="5_jump"]
+[ext_resource type="Texture2D" path="res://assets/characters/yier_slide.png" id="6_slide"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
-size = Vector2(40, 64)
+size = Vector2(64, 80)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_yier"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2_idle")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_jump")
+}],
+"loop": true,
+"name": &"jump",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3_run1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_run2")
+}],
+"loop": true,
+"name": &"run",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("6_slide")
+}],
+"loop": true,
+"name": &"slide",
+"speed": 5.0
+}]
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 1
@@ -11,11 +54,12 @@ collision_mask = 2
 script = ExtResource("1_runner")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 8)
 shape = SubResource("RectangleShape2D_player")
 
-[node name="Placeholder" type="ColorRect" parent="."]
-offset_left = -20.0
-offset_top = -32.0
-offset_right = 20.0
-offset_bottom = 32.0
-color = Color(0.2, 0.75, 0.95, 1)
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="Sprite" type="AnimatedSprite2D" parent="Visual"]
+sprite_frames = SubResource("SpriteFrames_yier")
+animation = &"run"
+autoplay = "run"
