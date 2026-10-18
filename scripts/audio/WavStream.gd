@@ -10,6 +10,14 @@ static func load_file(path: String) -> AudioStream:
 	var ext := path.get_extension().to_lower()
 	if ext == "wav":
 		return from_wav_file(path)
+	if ext == "ogg":
+		var ogg := from_ogg_file(path)
+		if ogg != null:
+			return ogg
+	if ext == "mp3":
+		var mp3 := from_mp3_file(path)
+		if mp3 != null:
+			return mp3
 	if ResourceLoader.exists(path):
 		var res = load(path)
 		if res is AudioStream:
@@ -67,6 +75,47 @@ static func from_wav_bytes(bytes: PackedByteArray) -> AudioStreamWAV:
 	stream.loop_mode = AudioStreamWAV.LOOP_DISABLED
 	stream.data = data
 	return stream
+
+
+static func from_ogg_file(path: String) -> AudioStream:
+	var bytes := _read_all(path)
+	if bytes.size() < 4 or _ascii(bytes, 0, 4) != "OggS":
+		push_warning("WavStream: not an Ogg file: %s" % path.get_file())
+		return null
+	var stream: AudioStream = AudioStreamOggVorbis.load_from_buffer(bytes)
+	if stream == null or stream.get_length() <= 0.0:
+		push_warning("WavStream: ogg decode failed: %s" % path.get_file())
+		return null
+	return stream
+
+
+static func from_mp3_file(path: String) -> AudioStream:
+	var bytes := _read_all(path)
+	if not _looks_like_mp3(bytes):
+		push_warning("WavStream: not an mp3 file: %s" % path.get_file())
+		return null
+	var stream: AudioStream = AudioStreamMP3.load_from_buffer(bytes)
+	if stream == null or stream.get_length() <= 0.0:
+		push_warning("WavStream: mp3 decode failed: %s" % path.get_file())
+		return null
+	return stream
+
+
+static func _read_all(path: String) -> PackedByteArray:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return PackedByteArray()
+	var bytes := file.get_buffer(file.get_length())
+	file.close()
+	return bytes
+
+
+static func _looks_like_mp3(bytes: PackedByteArray) -> bool:
+	if bytes.size() < 4:
+		return false
+	if _ascii(bytes, 0, 3) == "ID3":
+		return true
+	return bytes[0] == 0xFF and (bytes[1] & 0xE0) == 0xE0
 
 
 ## 内存里的短嘀声，给校准听拍用。beats 拍，每拍一个 click。

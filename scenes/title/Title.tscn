@@ -19,9 +19,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -120.0
+offset_top = -160.0
 offset_right = 200.0
-offset_bottom = 120.0
+offset_bottom = 160.0
 theme_override_constants/separation = 12
 
 [node name="TitleLabel" type="Label" parent="VBox"]
@@ -41,6 +41,10 @@ text = "开始游戏"
 [node name="CalibrationButton" type="Button" parent="VBox"]
 layout_mode = 2
 text = "校准 Offset"
+
+[node name="ChartTapButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "听歌打点"
 
 [node name="QuitButton" type="Button" parent="VBox"]
 layout_mode = 2

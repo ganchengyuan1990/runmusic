@@ -23,11 +23,14 @@ const WavLib = preload("res://scripts/audio/WavStream.gd")
 var _lives: int = START_LIVES
 var _ended: bool = false
 var _sfx_streams: Dictionary = {}
+var _chart_file := DEFAULT_CHART
 
 
 func _ready() -> void:
-	if not ChartLoader.load_chart(DEFAULT_CHART):
+	_chart_file = _resolve_chart_path()
+	if not ChartLoader.load_chart(_chart_file):
 		push_error("GameRoot: chart load failed: %s" % str(ChartLoader.get_last_errors()))
+	print("GameRoot: chart %s" % _chart_file)
 	_load_bgm()
 	_load_sfx()
 	GameClock.chart_offset_ms = float(ChartLoader.chart.get("offsetMs", 0.0))
@@ -71,11 +74,30 @@ func _process(_delta: float) -> void:
 		_end_run()
 
 
+func _resolve_chart_path() -> String:
+	var preview := ChartLoader.take_preview()
+	if _chart_file_ok(preview):
+		get_tree().set_meta(ChartLoader.OVERRIDE_META, preview)
+		return preview
+	if get_tree().has_meta(ChartLoader.OVERRIDE_META):
+		var again := str(get_tree().get_meta(ChartLoader.OVERRIDE_META))
+		if _chart_file_ok(again):
+			return again
+		get_tree().remove_meta(ChartLoader.OVERRIDE_META)
+	return DEFAULT_CHART
+
+
+func _chart_file_ok(path: String) -> bool:
+	return not path.is_empty() and FileAccess.file_exists(path)
+
+
 func _load_bgm() -> void:
-	# 玩家把 song_01.ogg 丢进目录时优先用它；否则用谱面 audio，再否则用生成的测试音。
+	# 默认局：song_01.ogg 优先，其次谱面 audio，再其次测试音。
+	# 打点试玩：只用谱面 audio，避免被 song_01 盖掉。
 	var chosen := ""
 	var stream: AudioStream = null
-	if FileAccess.file_exists(OGG_OVERRIDE):
+	var custom := _chart_file != DEFAULT_CHART
+	if not custom and FileAccess.file_exists(OGG_OVERRIDE):
 		chosen = OGG_OVERRIDE
 		stream = WavLib.load_file(OGG_OVERRIDE)
 	if stream == null:
@@ -83,7 +105,7 @@ func _load_bgm() -> void:
 		if not chart_path.is_empty() and FileAccess.file_exists(chart_path):
 			chosen = chart_path
 			stream = WavLib.load_file(chart_path)
-	if stream == null and FileAccess.file_exists(TEST_TONE):
+	if stream == null and not custom and FileAccess.file_exists(TEST_TONE):
 		chosen = TEST_TONE
 		stream = WavLib.load_file(TEST_TONE)
 	music.stream = stream

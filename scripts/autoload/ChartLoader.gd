@@ -19,11 +19,32 @@ func canonical_type(ntype: String) -> String:
 		_:
 			return ntype
 
+## 听歌打点「试玩」写入的谱路径。Game 读一次后清空；结算里再来一次走 OVERRIDE_META。
+const OVERRIDE_META := "chart_override"
+var pending_preview: String = ""
+
 ## 当前已加载谱面（Dictionary）；未加载时为空。
 var chart: Dictionary = {}
 ## 按 t 升序的音符数组（校验后副本）。
 var notes: Array = []
 var _load_errors: PackedStringArray = PackedStringArray()
+
+
+func arm_preview(path: String) -> void:
+	pending_preview = path
+
+
+func take_preview() -> String:
+	var path := pending_preview
+	pending_preview = ""
+	return path
+
+
+## 标题「开始游戏」调用：丢掉打点试玩，回到默认谱。
+func clear_run_override(tree: SceneTree) -> void:
+	pending_preview = ""
+	if tree != null and tree.has_meta(OVERRIDE_META):
+		tree.remove_meta(OVERRIDE_META)
 
 
 func get_last_errors() -> PackedStringArray:
