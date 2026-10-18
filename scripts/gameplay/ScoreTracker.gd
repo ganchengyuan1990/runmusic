@@ -12,11 +12,13 @@ var max_combo: int = 0
 var perfect_count: int = 0
 var good_count: int = 0
 var miss_count: int = 0
+var dodge_count: int = 0
 ## 一二接住布布的次数。结算和 HUD 都以它为主。
 var kiss_count: int = 0
 
 const PERFECT_SCORE := 100
 const GOOD_SCORE := 50
+const DODGE_SCORE := 100
 const KISS_SCORE := 300
 
 
@@ -27,6 +29,7 @@ func reset() -> void:
 	perfect_count = 0
 	good_count = 0
 	miss_count = 0
+	dodge_count = 0
 	kiss_count = 0
 	score_changed.emit(score, combo)
 	kisses_changed.emit(kiss_count)
@@ -43,6 +46,10 @@ func register_hit(grade: String) -> void:
 			good_count += 1
 			combo += 1
 			score += GOOD_SCORE
+		"dodge":
+			dodge_count += 1
+			combo += 1
+			score += DODGE_SCORE
 		"kiss":
 			kiss_count += 1
 			score += KISS_SCORE
@@ -65,5 +72,6 @@ func get_results_dict() -> Dictionary:
 		"perfect": perfect_count,
 		"good": good_count,
 		"miss": miss_count,
+		"dodge": dodge_count,
 		"kisses": kiss_count,
 	}

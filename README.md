@@ -1,25 +1,25 @@
-# 音乐跑酷 / Music Runner（Godot 4.x MVP 骨架）
+# 音乐跑酷 / Music Runner（Godot 4.x 恋爱公园）
 
-单轨侧视音乐跑酷。一二在一条赛道上跳和滑，布布出现时只要时机对上就接住。以**音频时钟**驱动障碍与判定，含校准 Offset 与结算。
+横版恋爱公园。一二可以左右跑、变高跳跃、短滑铲，相机跟着走。障碍和平台按谱面时间铺在世界上（`x = 起点 + t × pxPerSec`），歌曲时钟仍是 `GameClock`。掉进坑扣 1 条命，回到检查点，不是直接结束。布布出现时，靠近并且卡在时间窗里就能亲亲。
 
-> 本仓库当前为 **Phase 1**：自带一段可再生成的嘀声测试音。有音频时 `GameClock` 用播放位置驱动障碍；没有音频时仍走墙钟空跑。Boot → Title →（可选校准）→ Game → Results → Title。
+> 曲目仍是可再生成的嘀声测试音。有音频时 `GameClock` 用播放位置驱动谱面；没有音频时走墙钟。Boot → Title →（可选校准）→ Game → Results → Title。
 
 ---
 
 ## 如何用 Godot 4 打开
 
-1. 安装 **Godot 4.3+**（推荐与 `project.godot` 中 `config/features` 一致；4.2+ 一般可用）。  
+1. 安装 **Godot 4.7**（与 `project.godot` 里 `config/features` 一致）。  
    下载：https://godotengine.org/download  
 2. 启动 Godot → **Import** / **导入** → 选择本目录下的 `project.godot`。  
 3. 首次打开会生成 `.godot/` 与导入缓存（已在 `.gitignore` 中忽略）。  
 4. 按 **F5** 运行；主场景为 `scenes/boot/Boot.tscn`（Boot → Title）。  
-5. Title 可进 **校准** 或 **开始游戏**。默认会播 `assets/audio/bgm/song_01_test.wav`（60 秒、120 BPM 的嘀声，不是版权音乐）。曲子走完或谱面时间到了，进入结算。跳/滑超时是 Miss，不扣生命；布布错过只闪「擦肩」。
+5. Title 可进 **校准** 或 **开始游戏**。默认会播 `assets/audio/bgm/song_01_test.wav`（60 秒、120 BPM 的嘀声，不是版权音乐）。生命归零、或曲子走完，进入结算。
 
 ### 换成自己的歌
 
 1. 把文件放到 `assets/audio/bgm/song_01.ogg`（有这个文件时优先于测试音）。  
 2. 用 Godot 打开工程，让它导入 ogg。  
-3. 若长度不是 60 秒，改 `charts/song_01.json` 的 `durationSec`，并按需要改 `notes` / `bpm`。判定窗仍是 `windowsMs`，障碍提前量是 `approachSec`。  
+3. 若长度不是 60 秒，改 `charts/song_01.json` 的 `durationSec`，并按拍改 `notes` / `bpm`。`pxPerSec` 是「按住右跑、不冲刺」时的世界速度，障碍横坐标跟它对齐。  
 4. 测试音可随时用 `python3 tools/gen_test_tone.py` 再生成（正弦嘀声，公共领域）。
 
 ### 校准
@@ -29,59 +29,69 @@ Title → **校准 Offset**。
 - 滑条范围 ±200 ms，松手即写入 `user://settings.cfg` 的 `player_offset_ms`。正值让判定时钟变慢（觉得声音偏晚时往右拖）。  
 - **听拍校准**：播 8 拍嘀声，跟着按空格或再点按钮。至少 3 下后，平均误差会写进同一个偏移。局内时钟是播放位置 + 距上次混音的时间 − 输出延迟，再减去这个偏移。
 
-### 画面（单轨侧视）
+### 画面（恋爱公园）
 
-窗口默认 **1280×720** 横屏（`project.godot` 里 `viewport` 与 `window_*_override`）。拉伸是 `canvas_items` + `expand`，手持方向锁在横屏（`sensor landscape`）。
+窗口默认 **1280×720** 横屏。拉伸是 `canvas_items` + `expand`，手持方向锁在横屏。
 
-只有一条赛道，Y 用原先的中轨（世界坐标 30）。相机从侧面看。谱面里的 `lane` 可以不写；写了也会在加载时收成中轨，不参与判定。`schemaVersion` 是 2。
+一二站在草地上，相机在角色右前方。按住右，跑速等于谱面 `pxPerSec`（默认 280 px/s）时，会在音符时刻赶到对应的障碍。可以停、后退、冲刺，歌曲不会被玩家速度绑死。这是轻同步：关卡位置来自谱面时间，人可以自己跑。
 
-一二站在左侧竖线（判定线，画面约 22%，1280 宽时 x≈280）上，障碍从画面右缘向左移动，在 `note.t` 到达判定线。跳是相对赛道向上的一小段弧，滑铲把身体压矮。X 始终在判定线上。
+| 音符 `type` | 公园里 | 怎么过 |
+| --- | --- | --- |
+| `low`（旧名 `jump`） | 矮丛 | 跳过去。按得越久跳得越高 |
+| `high`（旧名 `slide`） | 花门 | 滑铲从门下过。门拱很高，跳不穿 |
+| `pit`（旧名 `block`） | 玫瑰池缺口 | 跑跳过去。掉下去扣 1 命，回到检查点 |
+| `platform`（旧名 `hold`） | 心形平台 | 跳上去。`width` / `height`，或用 `duration` 换算宽度 |
+| `buddy` | 布布 | 人在身边，并且时间落在 `windowsMs.buddy` |
+
+`lane` 可以不写。旧谱如果还带 `lane`，只能是 0..2。检查点由每个坑的前后和布布位置自动放，谱面不用单独写。
+
+越过障碍的时刻若靠近 `note.t`，记 Perfect / Good；偏离只记躲开，不扣命。扣命只来自掉坑。
 
 ### 角色
 
 | 名字 | 谁 | 画面 |
 | --- | --- | --- |
 | 一二 | 玩家 | 白熊猫，圆头、黑耳、黑眼圈 |
-| 布布 | 可接住的搭档 | 棕熊猫，从右侧靠近 |
+| 布布 | 可接住的搭档 | 棕熊猫，站在谱面对应的位置 |
 
-一二和布布用的是 `assets/characters/` 里的 128×128 手绘占位图（见同目录 `MANIFEST.md`），不是商业作品的官方立绘。名字用在界面和说明里；授权由项目方自行处理。换成正式立绘时，覆盖同名文件即可：`yier_idle.png`、`yier_run_01.png`、`yier_run_02.png`、`yier_jump.png`、`yier_slide.png`、`bubu_idle.png`、`bubu_approach.png`、`vfx_heart.png`。
+一二和布布用的是 `assets/characters/` 里的 128×128 手绘占位图（见同目录 `MANIFEST.md`），不是商业作品的官方立绘。换成正式立绘时，覆盖同名文件即可：`yier_idle.png`、`yier_run_01.png`、`yier_run_02.png`、`yier_jump.png`、`yier_slide.png`、`bubu_idle.png`、`bubu_approach.png`、`vfx_heart.png`。
 
-### 美术方向 C
+### 美术
 
-主方向是 **手绘 Q 版熊猫**（Figma 板 06–08）：https://www.figma.com/design/jWxcYeRIyPcnhj9iKlabys
-
-暖纸底 `#FFF6E8`，赛道 `#F8EBDA`，赛道边 `#D4C4B0`，判定线 `#5B8DEF`。一二毛色 `#FFFEFA`，布布 `#C4A484`，描边 `#2B2B2B`。障碍三色：跳 `#5ECF7A`、滑 `#F0C14A`、长按 `#9B7EDE`。亲亲计数 `#E85D7A`。
+暖纸底 `#FFF6E8`，草地与小路沿用车道纸色 `#F5E6D3`，描边 `#2B2B2B`。矮丛 `#5ECF7A`，花门金梁 `#F0C14A`，玫瑰池 `#F3B6C8`，平台 `#E7B7C8`。亲亲计数 `#E85D7A`。
 
 ### 接住布布
 
-谱面音符 `type: "buddy"`。状态是 Approach → CatchWindow → Kiss → Resume。
+谱面音符 `type: "buddy"`。布布的世界坐标是 `x_at_time(t)`，站在地面上。状态仍是 Approach → CatchWindow → Kiss → Resume。
 
-- 时间落在 `windowsMs.buddy`（默认 ±250ms）里，就算接住。不看车道。
-- 亲亲约 0.6 秒：两人并列放大、出心和「啾」、播放 `assets/audio/sfx/kiss.wav`。歌曲时钟暂停。点一下或按任意键可跳过。
+- 横向距离约 110 px 以内，并且时间落在 `windowsMs.buddy`（这首歌 ±400ms）里，就算接住。
+- 亲亲约 0.6 秒：两人并列放大、出心和「啾」、播放 `assets/audio/sfx/kiss.wav`。歌曲时钟 `soft_freeze`。这一拍里左右跑、跳、滑和重力都不生效，所以不会在亲亲时掉进坑。点一下或按任意键可跳过。
 - 没接住只闪「擦肩」，不扣生命。
-- 布布和前后障碍至少错开 1.6 秒，避免叠在同一段路上。
-- HUD 最上行是「亲亲 ×N」。分数和连击在下面。
 
-### 操作（桌面调试）
+### 操作
 
-| Action | 默认键 | 画面上 |
+| Action | 默认键 | 效果 |
 | --- | --- | --- |
-| 跳 | `W` / `Space` / `↑` | 上跳 |
-| 滑 | `S` / `↓` / `Ctrl` | 下蹲 |
-| 暂停 | `Esc` / `P` | |
+| `move_left` | `A` / `←` | 向左跑（按住） |
+| `move_right` | `D` / `→` | 向右跑（按住） |
+| `jump` | `W` / `Space` / `↑` | 按下起跳，按住更高，松开截断 |
+| `slide` | `S` / `↓` / `Ctrl` | 短滑铲，压低碰撞盒 |
+| `sprint` | `Shift` | 可选冲刺，比拍子更快 |
+| `pause` | `Esc` / `P` | |
 
-没有变道。`A` / `←` / `D` / `→` 不再绑定。
+### 触屏（横屏分区）
 
-### 触屏
-
-视口按上下对半。没有触摸屏时，鼠标左键单击走同一套分区。
+按住不放即持续。没有触摸屏时，鼠标左键按住走同一套分区。
 
 | 区域 | 动作 |
 | --- | --- |
-| 上半 | 跳 |
-| 下半 | 滑铲 |
+| 最左约 22% | 向左跑 |
+| 左中到约 48% | 向右跑 |
+| 右半 · 上 | 按住跳 |
+| 右半 · 下 | 滑铲 |
+| 上滑 / 下滑 | 跳 / 滑铲 |
 
-滑动：上滑跳，下滑滑铲。左右滑不触发动作。实现见 `scripts/input/InputRouter.gd` 的 `handle_touch`。标题、校准、结算都按 1280×720 居中排，不按竖屏窄栏。
+实现见 `scripts/input/InputRouter.gd`。
 
 ---
 
@@ -91,50 +101,38 @@ Title → **校准 Offset**。
 res://
 ├── project.godot
 ├── charts/song_01.json
-├── assets/audio|art|fonts/
+├── assets/audio|art|fonts|characters/
 ├── scenes/boot|title|calibration|game|results/
 ├── scripts/autoload|gameplay|input|ui/
-└── tests/
+└── tests/mvp_probe.gd
 ```
 
-**Autoload：** `Settings`、`GameClock`、`ChartLoader`（已在 `project.godot` 注册）。
+**Autoload：** `Settings`、`GameClock`、`ChartLoader`。
+
+玩法脚本：`RunnerController`（重力与跑跳）、`ParkCourse`（按谱面铺 StaticBody）、`BuddyCatch`、`Judge`、`GameRoot`。
 
 ---
 
-## Phase 0 — 当前可玩 / 仍可后做
+## 无头 / OpenGL 自检
 
-对照报告 §5 Phase 0 出口标准：**不听歌也能「跑、跳、滑」约 30 秒不崩**。
+已安装 Godot 4.3 时：
 
-已接上：
+```bash
+godot --headless --path . --import
+godot --headless --path . res://tests/mvp_probe.tscn
+godot --path . --rendering-method gl_compatibility res://tests/mvp_probe.tscn -- --shots
+```
 
-1. **空跑时钟**：`MusicPlayer` 没有 stream 时，`GameClock.start()` 用 `Time` 墙钟推进 `song_time_sec`。有 stream 时仍走硬件/系统音频时钟并 `play()`。  
-2. **障碍**：`ObstacleSpawner` 按 `charts/song_01.json` 在 `approachSec` 内生成，挂到 `ObstacleRoot`，过线后归还对象池。  
-3. **判定**：Perfect/Good 窗读谱面 `windowsMs`。超时的跳/滑自动 Miss，不扣生命。没有挡块，也没有换轨躲开。布布错过窗口只闪「擦肩」。HUD 显示亲亲、分数、连击、生命。  
-4. **结算**：本局数字写入 SceneTree meta `run_results`，Results 显示后可回 Title 或再来一次。谱面时间到了也会进结算。  
-5. **触屏分区**：上半跳、下半滑，见上文。
-
-## Phase 1 — 音频时钟
-
-已接上：
-
-1. **方案 B**：有音频且曲子长于 15 秒时，`song_time` = `get_playback_position()` + `get_time_since_last_mix()` − 缓存的 `get_output_latency()`，回跳丢掉。短曲改用系统钟（方案 A）。两者都减去 `Settings.player_offset_ms` 和谱面 `offsetMs`。  
-2. **校准**：滑条 + 听拍，写入 Settings。  
-3. **曲目**：`song_01.ogg` 优先；否则用谱面 `audio`；再否则用生成的 `song_01_test.wav`。都没有才空跑。  
-4. **谱面**：`song_01.json` 约 60 秒，音符跟测试音的拍对齐。  
-5. **音效**：Perfect / Good / Miss 播放 `assets/audio/sfx/` 里的短嘀声。HUD 的分数、连击、生命在音频时钟下同样更新。  
-6. **横版单轨**：赛道、判定线、障碍走向、触屏分区和标题/校准/结算都按 1280×720 侧视排列。只有一条赛道。方向 C 的纸感底和一二 / 布布占位已接上。布布用音符类型 `buddy`，只看时机。谱面音符是 `jump` / `slide` / `hold` / `buddy`。
-
-仍可后做：用正式立绘覆盖 `assets/characters/` 里的同名占位图，Windows / Android 导出。没有谱面编辑器，也不会自动侦测 BPM。
+探针会检查：谱面类型、左右与冲刺、着地、变高跳、滑铲碰撞盒、掉坑、亲亲冻结时不掉下去、障碍按歌曲提前量生成。`--shots` 另存标题与公园截图。
 
 ---
 
-## 关联文档
+## 音频时钟（摘要）
 
-| 文档 | 路径 |
-| --- | --- |
-| Godot MVP 拆解（本骨架依据） | `/workspace/reports/music-runner-godot-mvp-2026-10-18.md` |
-| 品类 / 谱面 / 判定窗调研 | `/workspace/reports/music-runner-research-2026-10-18.md` |
-| 引擎双端选型 | `/workspace/reports/music-runner-engine-dual-end-2026-10-18.md` |
+1. **方案 B**：有音频且曲子长于 15 秒时，`song_time` = `get_playback_position()` + `get_time_since_last_mix()` − 缓存的 `get_output_latency()`。短曲用系统钟。两者都减去 `Settings.player_offset_ms` 和谱面 `offsetMs`。  
+2. **曲目**：`song_01.ogg` 优先；否则用谱面 `audio`；再否则用 `song_01_test.wav`。都没有才空跑。  
+3. **音效**：Perfect / Good / Miss / Kiss 播放 `assets/audio/sfx/` 里的短嘀声。  
+4. **不要**用 `_process(delta)` 累加当主歌曲时间；一律走 `GameClock.song_time_sec`。
 
 官方 Sync with audio：https://docs.godotengine.org/en/stable/tutorials/audio/sync_with_audio.html
 
@@ -142,11 +140,10 @@ res://
 
 ## 说明
 
-- **不要**用 `_process(delta)` 累加当主歌曲时间；一律走 `GameClock.song_time_sec`。  
-- 谱面 schema 见 `charts/song_01.json`；校验逻辑在 `ChartLoader.validate_chart`。  
-- 未下载 Godot 二进制；本目录仅为可导入的文本脚手架。  
-- `export_presets.cfg` 未提交（见 `.gitignore`），导出时在编辑器内新建预设。
+- 谱面 schema 见 `charts/song_01.json`；校验在 `ChartLoader.validate_chart`。`schemaVersion` 仍是 1，公园类型是加进去的。  
+- 旧的三轨滚动障碍脚本还在仓库里，Game 场景已经不挂它们。  
+- `export_presets.cfg` 未提交（见 `.gitignore`）。
 
 ---
 
-*骨架生成日期：2026-10-18（Asia/Shanghai）*
+*恋爱公园这一版：2026-10-18*

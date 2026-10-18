@@ -1,11 +1,9 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/GameRoot.gd" id="1_game"]
 [ext_resource type="PackedScene" path="res://scenes/game/Player.tscn" id="2_player"]
 [ext_resource type="PackedScene" path="res://scenes/game/HUD.tscn" id="3_hud"]
-[ext_resource type="PackedScene" path="res://scenes/game/Obstacle.tscn" id="4_obstacle"]
-[ext_resource type="Script" path="res://scripts/gameplay/ObstaclePool.gd" id="5_pool"]
-[ext_resource type="Script" path="res://scripts/gameplay/ObstacleSpawner.gd" id="6_spawner"]
+[ext_resource type="Script" path="res://scripts/gameplay/ParkCourse.gd" id="4_park"]
 [ext_resource type="Script" path="res://scripts/gameplay/Judge.gd" id="7_judge"]
 [ext_resource type="Script" path="res://scripts/gameplay/ScoreTracker.gd" id="8_score"]
 [ext_resource type="Script" path="res://scripts/input/InputRouter.gd" id="9_input"]
@@ -18,63 +16,33 @@ script = ExtResource("1_game")
 [node name="World" type="Node2D" parent="."]
 
 [node name="Sky" type="ColorRect" parent="World"]
-offset_left = -900.0
-offset_top = -420.0
-offset_right = 1100.0
-offset_bottom = 420.0
+z_index = -8
+offset_left = -1600.0
+offset_top = -900.0
+offset_right = 22000.0
+offset_bottom = 900.0
+mouse_filter = 2
+color = Color(1, 0.89, 0.83, 1)
+
+[node name="SkyWash" type="ColorRect" parent="World"]
+z_index = -7
+offset_left = -1600.0
+offset_top = -80.0
+offset_right = 22000.0
+offset_bottom = 900.0
+mouse_filter = 2
 color = Color(1, 0.964706, 0.909804, 1)
 
-[node name="LaneGuide" type="Node2D" parent="World"]
-
-[node name="Track" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -700.0
-offset_top = -40.0
-offset_right = 980.0
-offset_bottom = 100.0
-color = Color(0.972549, 0.921569, 0.854902, 1)
-
-[node name="BorderTop" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -700.0
-offset_top = -40.0
-offset_right = 980.0
-offset_bottom = -38.0
-color = Color(0.831373, 0.768627, 0.690196, 1)
-
-[node name="BorderBottom" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -700.0
-offset_top = 100.0
-offset_right = 980.0
-offset_bottom = 102.0
-color = Color(0.831373, 0.768627, 0.690196, 1)
-
-[node name="JudgementLine" type="ColorRect" parent="World"]
-offset_left = -360.0
-offset_top = -50.0
-offset_right = -352.0
-offset_bottom = 110.0
-color = Color(0.356863, 0.552941, 0.937255, 1)
-
 [node name="Player" parent="World" instance=ExtResource("2_player")]
-position = Vector2(-356, 30)
+position = Vector2(160, 200)
+
+[node name="ParkCourse" type="Node2D" parent="World"]
+script = ExtResource("4_park")
 
 [node name="Buddy" parent="World" instance=ExtResource("10_buddy")]
 visible = false
-position = Vector2(920, 30)
-
-[node name="ObstaclePool" type="Node" parent="World"]
-script = ExtResource("5_pool")
-obstacle_scene = ExtResource("4_obstacle")
-obstacle_root_path = NodePath("../ObstacleRoot")
-initial_size = 16
-
-[node name="ObstacleSpawner" type="Node" parent="World"]
-script = ExtResource("6_spawner")
-pool_path = NodePath("../ObstaclePool")
-
-[node name="ObstacleRoot" type="Node2D" parent="World"]
-
-[node name="Camera2D" type="Camera2D" parent="World"]
-position = Vector2(0, 0)
+z_index = 7
+position = Vector2(160, 200)
 
 [node name="MusicPlayer" type="AudioStreamPlayer" parent="."]
 bus = &"Master"
@@ -90,8 +58,6 @@ script = ExtResource("8_score")
 
 [node name="InputRouter" type="Node" parent="."]
 script = ExtResource("9_input")
-runner_path = NodePath("../World/Player")
-judge_path = NodePath("../Judge")
 
 [node name="BuddyCatch" type="Node" parent="."]
 script = ExtResource("11_buddy")

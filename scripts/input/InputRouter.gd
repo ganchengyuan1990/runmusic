@@ -1,97 +1,98 @@
 extends Node
 class_name InputRouter
-## 键盘 / 触屏 → 统一 Action（带 stamped 时间）。
-## Judge 应用「按下瞬间的 song_time」，避免抬起才判定。
+## 键盘按住 / 触屏分区 → 左右跑、跳跃（按住与松开）、短滑铲、可选冲刺。
+## 判定用按下的瞬间；变高跳看的是跳跃键是否还按着。
 ##
-## 触屏（单轨侧视）：
-## - 上半：跳；下半：滑铲
-## - 滑动：上滑跳，下滑滑铲。左右滑不做事。
-## 桌面鼠标左键单击走同一套分区，便于没有触摸屏时试手感。
+## 触屏与按住的鼠标（横屏）：
+## - 最左一档：向左跑；左中：向右跑
+## - 右上：按住跳；右下：滑铲
 
 signal action_pressed(action: String, song_time: float)
 
-@export var runner_path: NodePath
-@export var judge_path: NodePath
 @export var swipe_threshold_px: float = 48.0
 
-var _runner: RunnerController
-var _judge: Judge
+var _points: Dictionary = {}
+var _touch_axis: float = 0.0
+var _touch_jump_held: bool = false
+var _touch_jump_pressed: bool = false
+var _touch_slide_pressed: bool = false
+var _slide_touch_held: bool = false
 var _touch_origin := Vector2.ZERO
-var _touch_index := -1
-var _touch_tracking := false
-var _swipe_fired := false
-## 触屏会再合成鼠标事件；这段时间内忽略鼠标，避免一次触摸触发两次。
-var _ignore_mouse_until_msec: int = 0
-
-
-func _ready() -> void:
-	if runner_path:
-		_runner = get_node_or_null(runner_path) as RunnerController
-	if judge_path:
-		_judge = get_node_or_null(judge_path) as Judge
+var _swipe_fired: bool = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if GameClock.is_soft_frozen():
+	if event.is_action_pressed("pause"):
+		action_pressed.emit("pause", GameClock.song_time_sec)
 		return
-	if event is InputEventScreenTouch or event is InputEventScreenDrag:
-		handle_touch(event)
-		get_viewport().set_input_as_handled()
-		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		handle_touch(event)
-		get_viewport().set_input_as_handled()
-		return
-	if not (event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion):
-		return
-	var stamped := GameClock.song_time_sec
-	if event.is_action_pressed("jump"):
-		_route_jump(stamped)
-	elif event.is_action_pressed("slide"):
-		_route_slide(stamped)
-	elif event.is_action_pressed("pause"):
-		_emit_and_route("pause", stamped)
-		# TODO: 暂停菜单
-
-
-## ScreenTouch / ScreenDrag / 鼠标左键。点按上下分区；纵向拖过阈值算一次滑动。
-func handle_touch(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
-		_ignore_mouse_until_msec = Time.get_ticks_msec() + 400
 		if touch.pressed:
-			_begin_pointer(touch.position, touch.index)
-		elif _touch_tracking and touch.index == _touch_index:
-			_end_pointer(touch.position)
+			_points[touch.index] = touch.position
+			_touch_origin = touch.position
+			_swipe_fired = false
+		else:
+			_points.erase(touch.index)
+		_rebuild_touch()
+		get_viewport().set_input_as_handled()
 	elif event is InputEventScreenDrag:
 		var drag := event as InputEventScreenDrag
-		_ignore_mouse_until_msec = Time.get_ticks_msec() + 400
-		if _touch_tracking and drag.index == _touch_index:
-			_consider_swipe(drag.position)
-	elif event is InputEventMouseButton:
-		if Time.get_ticks_msec() < _ignore_mouse_until_msec:
-			return
+		_points[drag.index] = drag.position
+		_consider_swipe(drag.position)
+		_rebuild_touch()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var mouse := event as InputEventMouseButton
 		if mouse.pressed:
-			_begin_pointer(mouse.position, -1)
-			# 鼠标单击立即按分区触发，不等待释放，方便桌面试触屏。
-			_end_pointer(mouse.position)
+			_points[-1] = mouse.position
+			_touch_origin = mouse.position
+			_swipe_fired = false
+		else:
+			_points.erase(-1)
+		_rebuild_touch()
+	elif event is InputEventMouseMotion and _points.has(-1):
+		_points[-1] = event.position
+		_consider_swipe(event.position)
+		_rebuild_touch()
 
 
-func _begin_pointer(pos: Vector2, index: int) -> void:
-	_touch_origin = pos
-	_touch_index = index
-	_touch_tracking = true
-	_swipe_fired = false
+func move_axis() -> float:
+	if GameClock.is_soft_frozen():
+		return 0.0
+	var axis := Input.get_axis("move_left", "move_right") + _touch_axis
+	return clampf(axis, -1.0, 1.0)
 
 
-func _end_pointer(pos: Vector2) -> void:
-	if not _swipe_fired:
-		_consider_swipe(pos)
-	if not _swipe_fired:
-		_route_tap(pos)
-	_touch_tracking = false
-	_touch_index = -1
+func jump_held() -> bool:
+	if GameClock.is_soft_frozen():
+		return false
+	return Input.is_action_pressed("jump") or _touch_jump_held
+
+
+func consume_jump_pressed() -> bool:
+	var pressed := Input.is_action_just_pressed("jump") or _touch_jump_pressed
+	_touch_jump_pressed = false
+	if GameClock.is_soft_frozen():
+		return false
+	if pressed:
+		action_pressed.emit("jump", GameClock.song_time_sec)
+	return pressed
+
+
+func consume_slide_pressed() -> bool:
+	var pressed := Input.is_action_just_pressed("slide") or _touch_slide_pressed
+	_touch_slide_pressed = false
+	if GameClock.is_soft_frozen():
+		return false
+	if pressed:
+		action_pressed.emit("slide", GameClock.song_time_sec)
+	return pressed
+
+
+func sprint_held() -> bool:
+	if GameClock.is_soft_frozen():
+		return false
+	return Input.is_action_pressed("sprint")
 
 
 func _consider_swipe(pos: Vector2) -> void:
@@ -100,42 +101,43 @@ func _consider_swipe(pos: Vector2) -> void:
 	var delta := pos - _touch_origin
 	if delta.length() < swipe_threshold_px:
 		return
-	_swipe_fired = true
 	if absf(delta.y) < absf(delta.x):
 		return
-	var stamped := GameClock.song_time_sec
+	_swipe_fired = true
 	if delta.y < 0.0:
-		_route_jump(stamped)
+		_touch_jump_pressed = true
+		_touch_jump_held = true
 	else:
-		_route_slide(stamped)
+		_touch_slide_pressed = true
 
 
-func _route_tap(pos: Vector2) -> void:
+func _rebuild_touch() -> void:
 	var size := get_viewport().get_visible_rect().size
 	if size.x <= 1.0 or size.y <= 1.0:
 		size = Vector2(1280, 720)
-	var stamped := GameClock.song_time_sec
-	if pos.y < size.y * 0.5:
-		_route_jump(stamped)
-	else:
-		_route_slide(stamped)
-
-
-func _route_jump(stamped: float) -> void:
-	_emit_and_route("jump", stamped)
-	if _runner:
-		_runner.try_jump()
-	if _judge:
-		_judge.try_judge("jump", stamped)
-
-
-func _route_slide(stamped: float) -> void:
-	_emit_and_route("slide", stamped)
-	if _runner:
-		_runner.try_slide()
-	if _judge:
-		_judge.try_judge("slide", stamped)
-
-
-func _emit_and_route(action: String, song_time: float) -> void:
-	action_pressed.emit(action, song_time)
+	var left := false
+	var right := false
+	var jump := false
+	var slide := false
+	for pos in _points.values():
+		var nx := float(pos.x) / size.x
+		var ny := float(pos.y) / size.y
+		if nx < 0.22:
+			left = true
+		elif nx < 0.48:
+			right = true
+		elif ny < 0.58:
+			jump = true
+		else:
+			slide = true
+	_touch_axis = 0.0
+	if left:
+		_touch_axis -= 1.0
+	if right:
+		_touch_axis += 1.0
+	if jump and not _touch_jump_held:
+		_touch_jump_pressed = true
+	_touch_jump_held = jump
+	if slide and not _slide_touch_held:
+		_touch_slide_pressed = true
+	_slide_touch_held = slide
