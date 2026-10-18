@@ -48,5 +48,12 @@ func set_player_offset_ms(value: float) -> void:
 
 
 func _apply_audio_buses() -> void:
-	# TODO(Phase 1): 绑定 Master / BGM / SFX 总线索引后设置 volume_db
-	pass
+	# BGM / SFX 音量写在各自的 AudioStreamPlayer 上。这里只推 Master。
+	var master := AudioServer.get_bus_index("Master")
+	if master < 0:
+		return
+	var linear := clampf(master_volume_linear, 0.0, 1.0)
+	if linear <= 0.0001:
+		AudioServer.set_bus_volume_db(master, -80.0)
+	else:
+		AudioServer.set_bus_volume_db(master, linear_to_db(linear))

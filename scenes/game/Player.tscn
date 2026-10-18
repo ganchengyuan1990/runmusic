@@ -1,9 +1,54 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/gameplay/RunnerController.gd" id="1_runner"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
-size = Vector2(40, 64)
+size = Vector2(64, 80)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ear"]
+bg_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 13
+corner_radius_top_right = 13
+corner_radius_bottom_right = 13
+corner_radius_bottom_left = 13
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_white"]
+bg_color = Color(1, 0.996078, 0.980392, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 36
+corner_radius_top_right = 36
+corner_radius_bottom_right = 36
+corner_radius_bottom_left = 36
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_body"]
+bg_color = Color(1, 0.996078, 0.980392, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eye"]
+bg_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_blush"]
+bg_color = Color(1, 0.717647, 0.772549, 0.7)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
 
 [node name="Player" type="CharacterBody2D"]
 collision_layer = 1
@@ -11,11 +56,79 @@ collision_mask = 2
 script = ExtResource("1_runner")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 8)
 shape = SubResource("RectangleShape2D_player")
 
-[node name="Placeholder" type="ColorRect" parent="."]
-offset_left = -20.0
-offset_top = -32.0
-offset_right = 20.0
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="EarL" type="Panel" parent="Visual"]
+offset_left = -34.0
+offset_top = -52.0
+offset_right = -8.0
+offset_bottom = -26.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ear")
+
+[node name="EarR" type="Panel" parent="Visual"]
+offset_left = 8.0
+offset_top = -52.0
+offset_right = 34.0
+offset_bottom = -26.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ear")
+
+[node name="Body" type="Panel" parent="Visual"]
+offset_left = -32.0
+offset_top = 8.0
+offset_right = 32.0
+offset_bottom = 48.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_body")
+
+[node name="Head" type="Panel" parent="Visual"]
+offset_left = -36.0
+offset_top = -40.0
+offset_right = 36.0
 offset_bottom = 32.0
-color = Color(0.2, 0.75, 0.95, 1)
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_white")
+
+[node name="EyeL" type="Panel" parent="Visual"]
+offset_left = -22.0
+offset_top = -12.0
+offset_right = -6.0
+offset_bottom = 8.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_eye")
+
+[node name="EyeR" type="Panel" parent="Visual"]
+offset_left = 6.0
+offset_top = -12.0
+offset_right = 22.0
+offset_bottom = 8.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_eye")
+
+[node name="Nose" type="Panel" parent="Visual"]
+offset_left = -5.0
+offset_top = 8.0
+offset_right = 5.0
+offset_bottom = 16.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_eye")
+
+[node name="BlushL" type="Panel" parent="Visual"]
+offset_left = -30.0
+offset_top = 10.0
+offset_right = -16.0
+offset_bottom = 18.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_blush")
+
+[node name="BlushR" type="Panel" parent="Visual"]
+offset_left = 16.0
+offset_top = 10.0
+offset_right = 30.0
+offset_bottom = 18.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_blush")

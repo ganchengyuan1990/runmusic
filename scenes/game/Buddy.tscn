@@ -1,0 +1,89 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ear"]
+bg_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 13
+corner_radius_top_right = 13
+corner_radius_bottom_right = 13
+corner_radius_bottom_left = 13
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fur"]
+bg_color = Color(0.768627, 0.643137, 0.517647, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 28
+corner_radius_top_right = 28
+corner_radius_bottom_right = 28
+corner_radius_bottom_left = 28
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_body"]
+bg_color = Color(0.768627, 0.643137, 0.517647, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 18
+corner_radius_top_right = 18
+corner_radius_bottom_right = 18
+corner_radius_bottom_left = 18
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_eye"]
+bg_color = Color(0.168627, 0.168627, 0.168627, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="Buddy" type="Node2D"]
+
+[node name="EarL" type="Panel" parent="."]
+offset_left = -34.0
+offset_top = -52.0
+offset_right = -8.0
+offset_bottom = -26.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ear")
+
+[node name="EarR" type="Panel" parent="."]
+offset_left = 8.0
+offset_top = -52.0
+offset_right = 34.0
+offset_bottom = -26.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ear")
+
+[node name="Body" type="Panel" parent="."]
+offset_left = -32.0
+offset_top = 8.0
+offset_right = 32.0
+offset_bottom = 48.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_body")
+
+[node name="Head" type="Panel" parent="."]
+offset_left = -36.0
+offset_top = -40.0
+offset_right = 36.0
+offset_bottom = 32.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_fur")
+
+[node name="EyeL" type="Panel" parent="."]
+offset_left = -22.0
+offset_top = -12.0
+offset_right = -6.0
+offset_bottom = 8.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_eye")
+
+[node name="EyeR" type="Panel" parent="."]
+offset_left = 6.0
+offset_top = -12.0
+offset_right = 22.0
+offset_bottom = 8.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_eye")

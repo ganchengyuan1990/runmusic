@@ -8,7 +8,7 @@ config_version=5
 
 config/name="音乐跑酷"
 config/name_localized={"en": "Music Runner"}
-config/description="三车道音乐跑酷 MVP — 音频时钟驱动障碍与判定"
+config/description="横版三轨音乐跑酷 MVP — 音频时钟驱动障碍与判定"
 config/version="0.0.1"
 run/main_scene="res://scenes/boot/Boot.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
@@ -22,13 +22,22 @@ ChartLoader="*res://scripts/autoload/ChartLoader.gd"
 
 [display]
 
+; Landscape side-scroller. Viewport stays 1280×720; handheld locks to landscape.
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-window/handheld/orientation=0
+window/handheld/orientation=4
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(1, 0.964706, 0.909804, 1)
+
+[gui]
+
+theme/custom="res://assets/theme/paper.tres"
 
 [input]
 

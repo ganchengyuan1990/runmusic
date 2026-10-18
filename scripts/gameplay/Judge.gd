@@ -30,8 +30,11 @@ func _apply_windows_from_chart() -> void:
 func unresolved_count() -> int:
 	var pending := 0
 	for i in ChartLoader.notes.size():
-		if not _judged_indices.has(i):
-			pending += 1
+		if _judged_indices.has(i):
+			continue
+		if str(ChartLoader.notes[i].get("type", "")) == "buddy":
+			continue
+		pending += 1
 	return pending
 
 
@@ -47,7 +50,7 @@ func try_judge(action: String, lane: int, song_time: float) -> Grade:
 		if int(n.get("lane", -1)) != lane:
 			continue
 		var ntype := str(n.get("type", ""))
-		if ntype == "block":
+		if ntype == "block" or ntype == "buddy":
 			continue
 		if action == "jump" and ntype not in ["jump", "hold"]:
 			continue
@@ -85,6 +88,8 @@ func process_auto_misses(song_time: float, runner_lane: int) -> void:
 		if song_time < t:
 			continue
 		var ntype := str(n.get("type", ""))
+		if ntype == "buddy":
+			continue
 		if ntype == "block":
 			_judged_indices[i] = true
 			var delta_ms := (song_time - t) * 1000.0
