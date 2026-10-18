@@ -1,8 +1,9 @@
 extends CharacterBody2D
 class_name RunnerController
-## 一二。重力、左右跑、按住跳得更高、短滑铲。相机挂在身上跟着走。
+## 一二。重力、按住跳得更高、短滑铲。相机挂在身上跟着走。
+## 公园局把横坐标锁在歌曲时间上，左右和冲刺不再改位置。跳和滑铲仍走原来的键。
+## 物理盒子只包住脚。矮丛和花门看 hurt_rect()，比立绘小一圈，碰到也不挡路。
 ## 亲亲 soft_freeze 时丢掉移动和重力，避免停在坑边时掉下去。
-## 听歌打点的试玩把横坐标锁在歌曲时间上，跳和滑铲仍走原来的键。
 
 signal jumped
 signal slid
@@ -31,7 +32,7 @@ var _force_jump_held: bool = false
 var _force_jump_pressed: bool = false
 var _force_slide: bool = false
 var _force_sprint: bool = false
-## 试玩：水平位置跟 GameClock，不再靠按住右跑去对拍。
+## 水平位置跟 GameClock，按谱面 pxPerSec 自动往右。
 var clock_locked: bool = false
 
 @onready var _visual: Node2D = $Visual
@@ -141,7 +142,7 @@ func _physics_process(delta: float) -> void:
 	floor_snap_length = 0.0 if velocity.y < 0.0 else 8.0
 	move_and_slide()
 	if lock_x:
-		# 物理步长和音频钟会漂。试玩直接把脚放到这一拍的世界坐标上。
+		# 物理步长和音频钟会漂。直接把脚放到这一拍的世界坐标上，左右和冲刺改不了它。
 		position.x = Layout.x_at_time(GameClock.song_time_sec)
 		velocity.x = speed
 	_update_facing()
@@ -169,6 +170,20 @@ func collision_height() -> float:
 	if _shape == null or _shape.shape == null:
 		return 0.0
 	return (_shape.shape as RectangleShape2D).size.y
+
+
+## 这一拍用来判断有没有碰到矮丛或花门。滑铲、跳跃和站立各用一盒。
+func hurt_rect() -> Rect2:
+	var local := Layout.hurt_local(_sliding, not is_on_floor())
+	return Rect2(position + local.position, local.size)
+
+
+func physics_rect() -> Rect2:
+	if _shape == null or not (_shape.shape is RectangleShape2D):
+		return Rect2()
+	var rect := _shape.shape as RectangleShape2D
+	var center := position + _shape.position
+	return Rect2(center - rect.size * 0.5, rect.size)
 
 
 func force_input(axis: float, jump_held: bool, jump_pressed: bool, slide_pressed: bool, sprint: bool) -> void:
@@ -246,7 +261,7 @@ func _apply_slide_shape() -> void:
 		return
 	var rect := _shape.shape as RectangleShape2D
 	rect.size = Vector2(Layout.SLIDE_HALF_W * 2.0, Layout.SLIDE_BOTTOM - Layout.SLIDE_TOP)
-	_shape.position = Vector2(6.0 * float(facing), (Layout.SLIDE_TOP + Layout.SLIDE_BOTTOM) * 0.5)
+	_shape.position = Vector2(Layout.SLIDE_SHIFT_X * float(facing), (Layout.SLIDE_TOP + Layout.SLIDE_BOTTOM) * 0.5)
 
 
 func _update_facing() -> void:

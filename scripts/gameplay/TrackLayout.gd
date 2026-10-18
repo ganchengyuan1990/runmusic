@@ -1,9 +1,8 @@
 extends RefCounted
 class_name TrackLayout
-## 恋爱公园侧视。一二在地面上自由跑，相机跟着走。
+## 恋爱公园侧视。相机跟着一二走。
 ## 谱面时间 t 对应世界横坐标：x = START_X + t * px_per_sec()。
-## 按住右跑且速度等于 px_per_sec 时，会在音符时刻到达该障碍。
-## 打点试玩不靠按住右：人的横坐标直接锁在 x_at_time(歌曲时间) 上。
+## 公园局不靠按住右：人的横坐标锁在 x_at_time(歌曲时间) 上，速度就是 px_per_sec。
 
 const GROUND_Y := 248.0
 const FEET_OFFSET := 48.0
@@ -11,18 +10,33 @@ const START_X := 160.0
 const PX_PER_SEC := 280.0
 const KILL_Y := 460.0
 
-## 站立碰撞盒相对角色原点：底 48，顶 -32。滑铲把顶压到 18，底不变。
-const STAND_HALF_W := 30.0
-const STAND_TOP := -32.0
+## 物理碰撞只包住脚，用来站地、落平台。矮丛和花门不是墙，不拿这只盒子去挡人。
+## 相对角色原点：底 48 贴地，顶 32，身高 16。滑铲同样贴地，只是略宽。
+const STAND_HALF_W := 16.0
+const STAND_TOP := 32.0
 const STAND_BOTTOM := 48.0
-const SLIDE_HALF_W := 36.0
-const SLIDE_TOP := 18.0
+const SLIDE_HALF_W := 22.0
+const SLIDE_TOP := 32.0
 const SLIDE_BOTTOM := 48.0
+const SLIDE_SHIFT_X := 4.0
 
-## 花门下沿离地高度。必须高于滑铲顶、低于站立顶，跳也穿不过门拱。
-const ARCH_CLEARANCE := 40.0
+## 碰到障碍时用的判定盒，比立绘小一圈：耳尖、尾巴和方盒子的空角都不算。
+## 站立含头；跳跃是收腿后的身体；滑铲是贴地的身子，不含竖起来的耳尖。
+const HURT_STAND := Rect2(-20, -50, 40, 86)
+const HURT_JUMP := Rect2(-14, -44, 42, 60)
+const HURT_SLIDE := Rect2(-36, 12, 80, 30)
+
+## 花门开口离地 80px。滑铲立绘头顶大约在离地 68px，能从梁下过去。
+## 判定盒再往梁里收 ARCH_HURT_INSET，贴着梁的下沿擦过去不算碰到。
+const ARCH_CLEARANCE := 80.0
 const ARCH_RISE := 230.0
-const BUSH_HEIGHT := 46.0
+const ARCH_HURT_INSET := 8.0
+## 矮丛画面大约高 44。判定是圆，比那三团叶子小一圈。
+const BUSH_HEIGHT := 44.0
+const BUSH_HURT_R := 22.0
+const BUSH_CENTER_LIFT := 20.0
+## 坑的两侧各留一窄条草地，脚尖擦到水边还不掉下去。
+const PIT_LIP := 12.0
 
 const GRAVITY := 1800.0
 const JUMP_VELOCITY := -640.0
@@ -57,3 +71,11 @@ static func stand_y() -> float:
 
 static func feet_y(origin_y: float) -> float:
 	return origin_y + FEET_OFFSET
+
+
+static func hurt_local(sliding: bool, airborne: bool) -> Rect2:
+	if sliding:
+		return HURT_SLIDE
+	if airborne:
+		return HURT_JUMP
+	return HURT_STAND

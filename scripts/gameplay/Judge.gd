@@ -1,7 +1,7 @@
 extends Node
 class_name Judge
-## 轻同步：身体越过谱面障碍时按歌曲时间给 Perfect / Good / 躲开。
-## 没踩在节拍上仍算躲开，不扣命。掉坑由 GameRoot 另计。
+## 干净越过障碍时按歌曲时间给 Perfect / Good / 躲开，躲开也有分。
+## 身体碰到矮丛或花门记 Miss，断连击，不扣命。掉坑由 GameRoot 另计。
 
 signal judged(result: String, note: Dictionary, delta_ms: float)
 
@@ -53,3 +53,18 @@ func submit_clear(note_index: int, song_time: float) -> void:
 	elif dt_ms <= good_ms:
 		label = "good"
 	judged.emit(label, note, dt_ms)
+
+
+## 身体进了矮丛或花门。记一次 Miss，这颗音符不再给 Perfect。不扣命。
+func submit_contact(note_index: int, song_time: float) -> void:
+	if note_index < 0 or note_index >= ChartLoader.notes.size():
+		return
+	if _judged_indices.has(note_index):
+		return
+	var note: Dictionary = ChartLoader.notes[note_index]
+	var ntype := ChartLoader.canonical_type(str(note.get("type", "")))
+	if ntype != "low" and ntype != "high":
+		return
+	_judged_indices[note_index] = true
+	var dt_ms := absf(song_time - float(note.get("t", 0.0))) * 1000.0
+	judged.emit("miss", note, dt_ms)

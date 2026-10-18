@@ -425,7 +425,7 @@ func _build_ui() -> void:
 	export_button.pressed.connect(_on_export)
 	files.add_child(export_button)
 	var preview := _button("试玩")
-	preview.tooltip_text = "一二跟着歌曲自动往右跑，跳和滑铲仍要自己按。不用按住右，打点才对得上。"
+	preview.tooltip_text = "一二跟着歌曲自动往右跑，跳和滑铲仍要自己按。开始游戏也是这样，打点才对得上。"
 	preview.pressed.connect(_on_preview)
 	files.add_child(preview)
 

@@ -5,6 +5,7 @@ class_name ParkCourse
 
 const Layout = preload("res://scripts/gameplay/TrackLayout.gd")
 const Palette = preload("res://scripts/ui/ArtPalette.gd")
+const HitboxDebugScript = preload("res://scripts/gameplay/HitboxDebug.gd")
 const HEART := preload("res://assets/characters/vfx_heart.png")
 
 const AHEAD_PX := 1100.0
@@ -28,6 +29,10 @@ func _ready() -> void:
 	_ground = _ensure_bucket("Ground", 1)
 	_hazards_root = _ensure_bucket("Hazards", 2)
 	_markers = _ensure_bucket("Markers", 3)
+	if get_node_or_null("HitboxDebug") == null:
+		var debug := HitboxDebugScript.new()
+		debug.name = "HitboxDebug"
+		add_child(debug)
 
 
 func build_from_chart(player: RunnerController, judge: Judge) -> void:
@@ -91,6 +96,7 @@ func _process(_delta: float) -> void:
 func _physics_process(_delta: float) -> void:
 	if not _built or _player == null or not GameClock.is_playing:
 		return
+	_spawn_due(GameClock.song_time_sec, _player.position.x)
 	if not GameClock.is_soft_frozen() and not _player.is_fallen():
 		_grade_passes()
 	_skate_pit_recovery()
@@ -111,8 +117,15 @@ func _grade_passes() -> void:
 	var px := _player.position.x
 	var feet := Layout.feet_y(_player.position.y)
 	var song_t := GameClock.song_time_sec
+	var hurt := _player.hurt_rect()
 	for h in _hazards:
-		if h.get("cleared", false) or not h.get("spawned", false):
+		if h.get("cleared", false):
+			continue
+		var kind := str(h["type"])
+		if kind == "low" or kind == "high":
+			_grade_gate(h, kind, hurt, px, song_t)
+			continue
+		if not h.get("spawned", false):
 			continue
 		var left := float(h["left"])
 		var right := float(h["right"])
@@ -123,18 +136,7 @@ func _grade_passes() -> void:
 			continue
 		var center := (left + right) * 0.5
 		var overlapping := px + 28.0 >= left and px - 28.0 <= right
-		var kind := str(h["type"])
 		match kind:
-			"low":
-				if overlapping and (not _player.is_grounded() or feet < top + 8.0):
-					h["armed"] = true
-				if overlapping and px >= center and h.get("armed", false) and float(h.get("center_t", -1.0)) < 0.0:
-					h["center_t"] = song_t
-			"high":
-				if overlapping and _player.is_sliding_now():
-					h["armed"] = true
-				if overlapping and px >= center and h.get("armed", false) and float(h.get("center_t", -1.0)) < 0.0:
-					h["center_t"] = song_t
 			"pit":
 				if px >= center and feet < Layout.KILL_Y - 80.0 and float(h.get("center_t", -1.0)) < 0.0:
 					h["center_t"] = song_t
@@ -151,19 +153,96 @@ func _grade_passes() -> void:
 			passed = px > right + 16.0 and _player.is_grounded() and feet < Layout.GROUND_Y + 8.0
 		elif kind == "platform":
 			passed = true
-		else:
-			passed = px > right + 10.0
 		if passed:
-			h["cleared"] = true
-			var when := float(h.get("center_t", song_t))
-			if when < 0.0:
-				when = song_t
-			if _judge:
-				_judge.submit_clear(int(h["index"]), when)
+			_resolve_clear(h, song_t)
 
 
-## 试玩锁在歌曲时间上。掉坑重生后如果这一拍还在缺口里，先贴着地面跟着歌滑过去，
-## 免得同一拍把命扣光，也免得为了落地而把人拉回检查点、和打点对不齐。
+## 矮丛、花门没有碰撞体。判定盒碰到身体就 Miss，人继续跟歌走。
+## 跳过圆、或滑铲时盒子没有进门，才记干净通过。
+func _grade_gate(h: Dictionary, kind: String, hurt: Rect2, px: float, song_t: float) -> void:
+	var left := float(h["left"])
+	var right := float(h["right"])
+	if _gate_hit(h, hurt):
+		_resolve_contact(h, song_t)
+		return
+	var x_over := hurt.position.x <= right and hurt.end.x >= left
+	var clearing := _player.is_sliding_now() if kind == "high" else not _player.is_grounded()
+	if x_over and clearing:
+		h["armed"] = true
+		var center := (left + right) * 0.5
+		if px >= center and float(h.get("center_t", -1.0)) < 0.0:
+			h["center_t"] = song_t
+	if h.get("armed", false) and hurt.position.x > right + 8.0:
+		_resolve_clear(h, song_t)
+
+
+func _resolve_clear(h: Dictionary, song_t: float) -> void:
+	if h.get("cleared", false):
+		return
+	h["cleared"] = true
+	var when := float(h.get("center_t", song_t))
+	if when < 0.0:
+		when = song_t
+	if _judge:
+		_judge.submit_clear(int(h["index"]), when)
+
+
+func _resolve_contact(h: Dictionary, song_t: float) -> void:
+	if h.get("cleared", false):
+		return
+	h["cleared"] = true
+	h["armed"] = false
+	if _judge:
+		_judge.submit_contact(int(h["index"]), song_t)
+
+
+func gate_hit(h: Dictionary, hurt: Rect2) -> bool:
+	return _gate_hit(h, hurt)
+
+
+func _gate_hit(h: Dictionary, hurt: Rect2) -> bool:
+	if str(h.get("shape", "")) == "circle":
+		return _rect_hits_circle(hurt, Vector2(float(h["cx"]), float(h["cy"])), float(h["r"]))
+	var rect := Rect2(float(h["left"]), float(h["top"]), float(h["right"]) - float(h["left"]), float(h["bottom"]) - float(h["top"]))
+	return hurt.intersects(rect, true)
+
+
+func _rect_hits_circle(rect: Rect2, center: Vector2, radius: float) -> bool:
+	var closest := Vector2(
+		clampf(center.x, rect.position.x, rect.end.x),
+		clampf(center.y, rect.position.y, rect.end.y)
+	)
+	return closest.distance_squared_to(center) <= radius * radius
+
+
+func solid_gate_count() -> int:
+	var n := 0
+	for h in _hazards:
+		var node: Variant = h.get("node")
+		if node is StaticBody2D and str(h.get("type", "")) in ["low", "high"]:
+			n += 1
+	return n
+
+
+func spawn_all() -> void:
+	_spawn_due(9999.0, 100000.0)
+
+
+func ground_covers(x: float) -> bool:
+	var lip := Layout.PIT_LIP
+	for pit in _pits:
+		var left := float(pit["left"]) + lip
+		var right := float(pit["right"]) - lip
+		if right - left < 24.0:
+			left = float(pit["left"])
+			right = float(pit["right"])
+		if x > left and x < right:
+			return false
+	return true
+
+
+## 锁在歌曲时间上时，掉坑重生后如果这一拍还在缺口里，先贴着地面跟着歌滑过去，
+## 免得同一拍把命扣光，也免得为了落地而把人拉回检查点、和节拍对不齐。
 func _skate_pit_recovery() -> void:
 	if _player == null or not _player.clock_locked:
 		return
@@ -206,13 +285,19 @@ func _build_ground() -> void:
 	var duration := float(ChartLoader.chart.get("durationSec", 60.0))
 	var cursor := Layout.START_X - 720.0
 	var end_x := Layout.x_at_time(duration) + 900.0
+	var lip := Layout.PIT_LIP
 	for pit in _pits:
 		var left := float(pit["left"])
 		var right := float(pit["right"])
-		if left > cursor + 4.0:
-			_add_ground(cursor, left)
+		var gap_left := left + lip
+		var gap_right := right - lip
+		if gap_right - gap_left < 24.0:
+			gap_left = left
+			gap_right = right
+		if gap_left > cursor + 4.0:
+			_add_ground(cursor, gap_left)
 		_add_pond(left, right)
-		cursor = right
+		cursor = gap_right
 	if end_x > cursor + 4.0:
 		_add_ground(cursor, end_x)
 
@@ -294,17 +379,30 @@ func _collect_hazards() -> void:
 		var right := center
 		var top := Layout.GROUND_Y
 		var bottom := Layout.GROUND_Y
+		var shape := "rect"
+		var cx := center
+		var cy := 0.0
+		var radius := 0.0
 		match kind:
 			"low":
-				left = center - BUSH_W * 0.5
-				right = center + BUSH_W * 0.5
-				top = Layout.GROUND_Y - Layout.BUSH_HEIGHT
-				bottom = Layout.GROUND_Y
+				# 判定是圆，收在三团叶子里面。方框的四个角不再挡人。
+				shape = "circle"
+				cy = Layout.GROUND_Y - Layout.BUSH_CENTER_LIFT
+				radius = Layout.BUSH_HURT_R
+				left = center - radius
+				right = center + radius
+				top = cy - radius
+				bottom = cy + radius
 			"high":
-				left = center - ARCH_W * 0.5
-				right = center + ARCH_W * 0.5
-				top = Layout.GROUND_Y - Layout.ARCH_RISE
-				bottom = Layout.GROUND_Y - Layout.ARCH_CLEARANCE
+				var art_left := center - ARCH_W * 0.5
+				var art_right := center + ARCH_W * 0.5
+				var art_top := Layout.GROUND_Y - Layout.ARCH_RISE
+				var art_bottom := Layout.GROUND_Y - Layout.ARCH_CLEARANCE
+				var inset := Layout.ARCH_HURT_INSET
+				left = art_left + inset
+				right = art_right - inset
+				top = art_top + inset
+				bottom = art_bottom - inset
 			"pit":
 				var width := clampf(float(n.get("width", 128.0)), 48.0, 420.0)
 				left = center - width * 0.5
@@ -323,14 +421,36 @@ func _collect_hazards() -> void:
 				bottom = top + 18.0
 			_:
 				continue
+		var art_left := left
+		var art_right := right
+		var art_top := top
+		var art_bottom := bottom
+		if kind == "low":
+			art_left = center - BUSH_W * 0.5
+			art_right = center + BUSH_W * 0.5
+			art_top = Layout.GROUND_Y - Layout.BUSH_HEIGHT
+			art_bottom = Layout.GROUND_Y
+		elif kind == "high":
+			art_left = center - ARCH_W * 0.5
+			art_right = center + ARCH_W * 0.5
+			art_top = Layout.GROUND_Y - Layout.ARCH_RISE
+			art_bottom = Layout.GROUND_Y - Layout.ARCH_CLEARANCE
 		_hazards.append({
 			"index": i,
 			"type": kind,
 			"t": t,
+			"shape": shape,
+			"cx": cx,
+			"cy": cy,
+			"r": radius,
 			"left": left,
 			"right": right,
 			"top": top,
 			"bottom": bottom,
+			"art_left": art_left,
+			"art_right": art_right,
+			"art_top": art_top,
+			"art_bottom": art_bottom,
 			"spawned": false,
 			"cleared": false,
 			"armed": false,
@@ -344,42 +464,53 @@ func _spawn_hazard(h: Dictionary) -> void:
 	var kind := str(h["type"])
 	if kind == "pit":
 		return
-	var left := float(h["left"])
-	var right := float(h["right"])
-	var top := float(h["top"])
-	var bottom := float(h["bottom"])
-	var body := StaticBody2D.new()
-	body.collision_layer = 2
-	body.collision_mask = 0
+	var left := float(h["art_left"])
+	var right := float(h["art_right"])
+	var top := float(h["art_top"])
+	var bottom := float(h["art_bottom"])
 	var rect := Rect2(left, top, right - left, bottom - top)
-	body.add_child(_collision(rect))
+	var holder: Node2D
+	if kind == "platform":
+		var body := StaticBody2D.new()
+		body.collision_layer = 2
+		body.collision_mask = 0
+		var slab := Rect2(float(h["left"]), float(h["top"]), float(h["right"]) - float(h["left"]), float(h["bottom"]) - float(h["top"]))
+		body.add_child(_collision(slab))
+		holder = body
+	else:
+		# 矮丛和花门只画出来。碰到由判定盒记 Miss，不把锁钟的人顶回去。
+		holder = Node2D.new()
 	match kind:
 		"low":
-			body.add_child(_circle(Vector2((left + right) * 0.5, bottom - 16.0), 28.0, Color("#3EAA62"), 12))
-			body.add_child(_circle(Vector2(left + 22.0, bottom - 10.0), 18.0, Palette.JUMP, 10))
-			body.add_child(_circle(Vector2(right - 20.0, bottom - 12.0), 16.0, Color("#8FD99A"), 10))
-			body.add_child(_circle(Vector2((left + right) * 0.5, top + 10.0), 7.0, Palette.KISS, 8))
+			holder.add_child(_circle(Vector2((left + right) * 0.5, bottom - 16.0), 28.0, Color("#3EAA62"), 12))
+			holder.add_child(_circle(Vector2(left + 22.0, bottom - 10.0), 18.0, Palette.JUMP, 10))
+			holder.add_child(_circle(Vector2(right - 20.0, bottom - 12.0), 16.0, Color("#8FD99A"), 10))
+			holder.add_child(_circle(Vector2((left + right) * 0.5, top + 10.0), 7.0, Palette.KISS, 8))
 		"high":
-			body.add_child(_rect_poly(rect, Color("#F7C3D2")))
+			holder.add_child(_rect_poly(rect, Color("#F7C3D2")))
 			var beam := Rect2(left - 6.0, bottom - 16.0, (right - left) + 12.0, 16.0)
-			body.add_child(_rect_poly(beam, Palette.SLIDE))
+			holder.add_child(_rect_poly(beam, Palette.SLIDE))
 			var heart := Sprite2D.new()
 			heart.texture = HEART
 			heart.position = Vector2((left + right) * 0.5, top + 28.0)
 			heart.scale = Vector2(0.35, 0.35)
-			body.add_child(heart)
+			holder.add_child(heart)
 		"platform":
-			body.add_child(_rect_poly(rect, Color("#E7B7C8")))
-			body.add_child(_rect_poly(Rect2(left, top, right - left, 6.0), Palette.HOLD))
+			holder.add_child(_rect_poly(rect, Color("#E7B7C8")))
+			holder.add_child(_rect_poly(Rect2(left, top, right - left, 6.0), Palette.HOLD))
 			var heart := Sprite2D.new()
 			heart.texture = HEART
 			heart.position = Vector2((left + right) * 0.5, top - 10.0)
 			heart.scale = Vector2(0.28, 0.28)
-			body.add_child(heart)
+			holder.add_child(heart)
 		_:
-			body.add_child(_rect_poly(rect, Palette.BLOCK))
-	_hazards_root.add_child(body)
-	h["node"] = body
+			holder.add_child(_rect_poly(rect, Palette.BLOCK))
+	_hazards_root.add_child(holder)
+	if holder is StaticBody2D:
+		# direction 是“可以穿过去”的方向。向下表示从台面下方向上跳可以穿过，
+		# 从上往下落会站住。锁钟把人水平推进平台时，侧面也不会把人弹开。
+		PhysicsServer2D.body_set_shape_as_one_way_collision(holder.get_rid(), 0, true, 2.0, Vector2.DOWN)
+	h["node"] = holder
 
 
 func _build_checkpoints() -> void:

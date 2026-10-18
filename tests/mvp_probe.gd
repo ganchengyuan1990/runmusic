@@ -1,5 +1,5 @@
 extends Node
-## 无头检查跑跳、滑铲、掉坑、亲亲冻结、接住布布加命、布布停留和谱面铺关。
+## 无头检查跑跳、滑铲、掉坑、亲亲冻结、接住布布加命、布布停留、谱面铺关，以及开始游戏锁钟自动跑。
 ## 带 --shots 时再用 OpenGL 视口截恋爱公园。
 ## 作为场景运行（不要 --script），自动加载才在编译期可见。
 
@@ -181,6 +181,10 @@ func _logic() -> bool:
 		return false
 	if not await _buddy_hold(host):
 		return false
+	if not await _song_autorun(host):
+		return false
+	if not await _hurt_boxes(host):
+		return false
 	print("logic ok")
 	return true
 
@@ -353,6 +357,262 @@ func _buddy_hold(host: Node) -> bool:
 	return true
 
 
+## 标题「开始游戏」进的就是这首 song_01。横坐标跟歌曲走，按左和冲刺拉不走。
+func _song_autorun(host: Node) -> bool:
+	ChartLoader.clear_run_override(get_tree())
+	for _i in 3:
+		await get_tree().process_frame
+	var game: Node = load("res://scenes/game/Game.tscn").instantiate()
+	host.add_child(game)
+	GameClock.set_process(false)
+	var player: RunnerController = game.get_node("World/Player")
+	if not player.clock_locked:
+		return _autorun_fail(game, "title start is not clock locked")
+	if str(ChartLoader.chart.get("songId", "")) != "song_01":
+		return _autorun_fail(game, "title start song %s" % ChartLoader.chart.get("songId", ""))
+	var worst := 0.0
+	for i in 21:
+		var t := float(i) * 0.2
+		GameClock.song_time_sec = t
+		player.force_input(-1.0, false, false, false, true)
+		await get_tree().physics_frame
+		worst = maxf(worst, absf(player.position.x - TrackLayout.x_at_time(t)))
+	print("song autorun worst=%.3f" % worst)
+	if worst > 1.0:
+		return _autorun_fail(game, "auto-run drifted %.2f px" % worst)
+	if player.facing < 0:
+		return _autorun_fail(game, "left input flipped facing")
+	player.clear_force()
+	Input.action_press("move_left")
+	Input.action_press("sprint")
+	GameClock.song_time_sec = 0.5
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	Input.action_release("move_left")
+	Input.action_release("sprint")
+	if absf(player.position.x - TrackLayout.x_at_time(0.5)) > 1.0:
+		return _autorun_fail(game, "holding left pulled off beat at %s" % player.position.x)
+	GameClock.song_time_sec = 1.0
+	for _i in 60:
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+		if player.is_grounded() and absf(player.position.y - TrackLayout.stand_y()) < 1.0:
+			break
+	if not player.is_grounded():
+		return _autorun_fail(game, "not grounded before jump at %s" % player.position)
+	var y0 := player.position.y
+	player.force_input(-1.0, true, true, false, false)
+	GameClock.song_time_sec = 1.15
+	await get_tree().physics_frame
+	if player.position.y >= y0 - 1.0:
+		return _autorun_fail(game, "auto-run jump did not rise")
+	if absf(player.position.x - TrackLayout.x_at_time(1.15)) > 1.0:
+		return _autorun_fail(game, "jump pulled x off the beat")
+	for _i in 50:
+		GameClock.song_time_sec = 1.3
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+		if player.is_grounded():
+			break
+	if not player.is_grounded():
+		return _autorun_fail(game, "did not land after jump at %s" % player.position)
+	player.force_input(-1.0, false, false, true, true)
+	GameClock.song_time_sec = 2.0
+	await get_tree().physics_frame
+	if not player.is_sliding_now():
+		return _autorun_fail(game, "slide ignored during auto-run")
+	if absf(player.position.x - TrackLayout.x_at_time(2.0)) > 1.0:
+		return _autorun_fail(game, "slide pulled x off the beat")
+	var falls := {"n": 0}
+	player.pit_fallen.connect(func() -> void: falls["n"] += 1)
+	GameClock.song_time_sec = 10.0
+	player.position.y = TrackLayout.KILL_Y + 80.0
+	await get_tree().physics_frame
+	if falls["n"] < 1:
+		return _autorun_fail(game, "pit did not cost a life")
+	for i in 4:
+		GameClock.song_time_sec = 10.0 + float(i) * 0.05
+		await get_tree().physics_frame
+		if absf(player.position.x - TrackLayout.x_at_time(GameClock.song_time_sec)) > 1.0:
+			return _autorun_fail(game, "respawn left the clock at %s" % player.position)
+		if absf(player.position.y - TrackLayout.stand_y()) > 2.0:
+			return _autorun_fail(game, "respawn fell back into the pit at %s" % player.position)
+	var hud: GameHUD = game.get_node("HUD")
+	if hud.lives_label.text != "生命 2":
+		return _autorun_fail(game, "pit lives %s" % hud.lives_label.text)
+	GameClock.set_process(true)
+	GameClock.stop()
+	game.queue_free()
+	await get_tree().process_frame
+	print("song autorun ok")
+	return true
+
+
+func _autorun_fail(game: Node, msg: String) -> bool:
+	Input.action_release("move_left")
+	Input.action_release("sprint")
+	GameClock.set_process(true)
+	GameClock.stop()
+	if is_instance_valid(game):
+		game.queue_free()
+	return _fail(msg)
+
+
+## 矮丛和花门不再是墙。站在里面只记 Miss，不扣命，横坐标仍跟歌曲。
+func _hurt_boxes(host: Node) -> bool:
+	var slide_art_top := 14.0 + (30.0 - 64.0)
+	var opening_local := TrackLayout.FEET_OFFSET - TrackLayout.ARCH_CLEARANCE
+	if slide_art_top < opening_local + 6.0:
+		return _fail("slide art still clips the arch (art %.1f opening %.1f)" % [slide_art_top, opening_local])
+	var arch_hurt_bottom := opening_local - TrackLayout.ARCH_HURT_INSET
+	if TrackLayout.HURT_STAND.position.y > arch_hurt_bottom - 4.0:
+		return _fail("stand hurt no longer reaches the gate")
+	if TrackLayout.HURT_SLIDE.position.y < arch_hurt_bottom:
+		return _fail("slide hurt still intersects the gate")
+
+	ChartLoader.clear_run_override(get_tree())
+	for _i in 3:
+		await get_tree().process_frame
+	var game: Node = load("res://scenes/game/Game.tscn").instantiate()
+	host.add_child(game)
+	GameClock.set_process(false)
+	var player: RunnerController = game.get_node("World/Player")
+	var park: ParkCourse = game.get_node("World/ParkCourse")
+	var tracker: ScoreTracker = game.get_node("ScoreTracker")
+	var hud: GameHUD = game.get_node("HUD")
+	park.spawn_all()
+	if park.solid_gate_count() != 0:
+		return _hurt_fail(game, "bush or arch is still a solid wall")
+	var pit_x := TrackLayout.x_at_time(10.0)
+	if not park.ground_covers(pit_x - 64.0 + 4.0):
+		return _hurt_fail(game, "pit lip is not solid")
+	if park.ground_covers(pit_x):
+		return _hurt_fail(game, "pit center is still ground")
+	if not InputMap.has_action("debug_hitboxes"):
+		return _hurt_fail(game, "missing debug_hitboxes")
+	var debug := park.get_node("HitboxDebug")
+	debug.toggle()
+	if not debug.enabled:
+		return _hurt_fail(game, "hitbox debug did not turn on")
+	debug.toggle()
+	if debug.enabled:
+		return _hurt_fail(game, "hitbox debug did not turn off")
+
+	GameClock.song_time_sec = 1.0
+	for _i in 8:
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+	if not player.is_grounded():
+		return _hurt_fail(game, "not grounded before hurt checks at %s" % player.position)
+	var stand_h := player.hurt_rect().size.y
+	var misses := tracker.miss_count
+	if not await _expect_brush(game, player, tracker, hud, 4.0, misses + 1, false):
+		return false
+	if not await _expect_brush(game, player, tracker, hud, 7.0, misses + 2, false):
+		return false
+	var before_platform := tracker.miss_count
+	if not await _hold_on_clock(game, player, 16.5, false):
+		return false
+	if tracker.miss_count != before_platform:
+		return _hurt_fail(game, "platform on the ground counted as a hit")
+	GameClock.song_time_sec = 19.5
+	var raised := TrackLayout.stand_y() - 120.0
+	player.position.y = raised
+	player.velocity = Vector2.ZERO
+	await get_tree().physics_frame
+	if tracker.miss_count != before_platform:
+		return _hurt_fail(game, "jumping over the bush counted as a hit")
+	if absf(player.position.x - TrackLayout.x_at_time(19.5)) > 1.5:
+		return _hurt_fail(game, "airborne x left the clock")
+	if player.position.y > raised + 48.0:
+		return _hurt_fail(game, "airborne player was shoved down to %s" % player.position.y)
+	var plat_top := 0.0
+	for h in park._hazards:
+		if str(h.get("type", "")) == "platform" and absf(float(h.get("t", -1.0)) - 16.5) < 0.01:
+			plat_top = float(h["top"])
+	if plat_top <= 1.0:
+		return _hurt_fail(game, "platform top missing")
+	GameClock.song_time_sec = 16.5
+	player.velocity = Vector2.ZERO
+	player.position.y = plat_top - TrackLayout.FEET_OFFSET - 36.0
+	var landed := false
+	for _i in 50:
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+		var feet := TrackLayout.feet_y(player.position.y)
+		if player.is_grounded() and absf(feet - plat_top) < 12.0:
+			landed = true
+			break
+	if not landed:
+		return _hurt_fail(game, "did not land on the platform at %s" % player.position)
+	if absf(player.position.x - TrackLayout.x_at_time(16.5)) > 1.5:
+		return _hurt_fail(game, "landing pulled x off the platform beat")
+	GameClock.song_time_sec = 1.2
+	player.position.y = TrackLayout.stand_y()
+	player.velocity = Vector2.ZERO
+	for _i in 10:
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+		if player.is_grounded():
+			break
+	if not player.is_grounded():
+		return _hurt_fail(game, "did not land before the slide check")
+	player.force_input(0.0, false, false, true, false)
+	await get_tree().physics_frame
+	if not player.is_sliding_now():
+		return _hurt_fail(game, "slide did not start")
+	if player.collision_height() > 36.0:
+		return _hurt_fail(game, "slide physics height %s" % player.collision_height())
+	if player.hurt_rect().size.y >= stand_h:
+		return _hurt_fail(game, "slide hurt is not shorter than standing")
+	var before_slide := tracker.miss_count
+	if not await _hold_on_clock(game, player, 22.5, true):
+		return false
+	if tracker.miss_count != before_slide:
+		return _hurt_fail(game, "sliding under the arch counted as a hit")
+	if hud.lives_label.text != "生命 3":
+		return _hurt_fail(game, "gate contact changed lives to %s" % hud.lives_label.text)
+	GameClock.set_process(true)
+	GameClock.stop()
+	game.queue_free()
+	await get_tree().process_frame
+	print("hurt boxes ok")
+	return true
+
+
+func _expect_brush(game: Node, player: RunnerController, tracker: ScoreTracker, hud: GameHUD, beat: float, misses: int, sliding: bool) -> bool:
+	if not await _hold_on_clock(game, player, beat, sliding):
+		return false
+	if tracker.miss_count != misses:
+		return _hurt_fail(game, "contact at t=%.1f misses %s want %s" % [beat, tracker.miss_count, misses])
+	if hud.lives_label.text != "生命 3":
+		return _hurt_fail(game, "contact at t=%.1f lives %s" % [beat, hud.lives_label.text])
+	return true
+
+
+func _hold_on_clock(game: Node, player: RunnerController, beat: float, sliding: bool) -> bool:
+	GameClock.song_time_sec = beat
+	var y0 := player.position.y
+	for _i in 4:
+		player.force_input(-1.0, false, false, false, true)
+		await get_tree().physics_frame
+		if absf(player.position.x - TrackLayout.x_at_time(beat)) > 1.5:
+			return _hurt_fail(game, "clock x drifted at t=%.1f pos %s" % [beat, player.position])
+	if not sliding and absf(player.position.y - y0) > 6.0:
+		return _hurt_fail(game, "gate shoved y at t=%.1f from %.1f to %.1f" % [beat, y0, player.position.y])
+	if sliding and absf(player.position.y - TrackLayout.stand_y()) > 8.0:
+		return _hurt_fail(game, "slide left the ground at %s" % player.position)
+	return true
+
+
+func _hurt_fail(game: Node, msg: String) -> bool:
+	GameClock.set_process(true)
+	GameClock.stop()
+	if is_instance_valid(game):
+		game.queue_free()
+	return _fail(msg)
+
+
 func _buddy_in_view(player: Node2D, buddy: Node2D) -> bool:
 	if not buddy.visible:
 		return false
@@ -416,9 +676,15 @@ func _shots() -> bool:
 			break
 	if not ready:
 		return _fail("game clock did not start")
-	player.force_input(0.0, false, false, false, false)
-	for _i in 12:
+	if not player.clock_locked:
+		return _fail("shot run is not clock locked")
+	GameClock.set_process(false)
+	GameClock.song_time_sec = 0.0
+	player.clear_force()
+	for _i in 8:
 		await get_tree().physics_frame
+	if absf(player.position.x - TrackLayout.START_X) > 1.5:
+		return _fail("shot start left the clock at %s" % player.position.x)
 	if not await _grab(SHOT_DIR + "/park_start.png"):
 		return false
 
@@ -428,51 +694,76 @@ func _shots() -> bool:
 	if not await _grab_run_frame(player, sprite, 1, SHOT_DIR + "/park_run_b.png"):
 		return false
 
-	var bush_x := TrackLayout.x_at_time(4.0)
-	for _i in 240:
-		var dx := bush_x - player.position.x
-		if dx < 90.0:
-			break
-		player.force_input(1.0, false, false, false, false)
-		await get_tree().physics_frame
+	var bush_err := await _advance_to(player, TrackLayout.x_at_time(4.0), 90.0)
+	if bush_err != "":
+		return _fail(bush_err)
+	var debug := game.get_node("World/ParkCourse/HitboxDebug")
+	debug.toggle()
+	if not await _grab(SHOT_DIR + "/park_hitbox.png"):
+		return false
+	debug.toggle()
 	for i in 18:
-		player.force_input(1.0, true, i == 0, false, false)
+		GameClock.song_time_sec += 1.0 / 60.0
+		player.force_input(-1.0, true, i == 0, false, true)
 		await get_tree().physics_frame
+	if absf(player.position.x - TrackLayout.x_at_time(GameClock.song_time_sec)) > 1.5:
+		return _fail("jump shot left the beat")
 	if not await _grab(SHOT_DIR + "/park_jump.png"):
 		return false
 
-	var arch_x := TrackLayout.x_at_time(7.0)
-	for _i in 240:
-		if player.position.x > arch_x - 120.0:
+	var arch_err := await _advance_to(player, TrackLayout.x_at_time(7.0), 120.0)
+	if arch_err != "":
+		return _fail(arch_err)
+	for _i in 40:
+		if player.is_grounded() and not player.is_sliding_now():
 			break
-		player.force_input(1.0, false, false, false, false)
+		GameClock.song_time_sec += 1.0 / 60.0
+		player.force_input(-1.0, false, false, false, true)
 		await get_tree().physics_frame
-	player.force_input(1.0, false, false, true, false)
+	player.force_input(-1.0, false, false, true, true)
+	GameClock.song_time_sec += 1.0 / 60.0
 	await get_tree().physics_frame
 	for _i in 8:
-		player.force_input(1.0, false, false, false, false)
+		GameClock.song_time_sec += 1.0 / 60.0
+		player.force_input(-1.0, false, false, false, true)
 		await get_tree().physics_frame
+	if not player.is_sliding_now():
+		return _fail("shot slide did not start")
+	if absf(player.position.x - TrackLayout.x_at_time(GameClock.song_time_sec)) > 1.5:
+		return _fail("slide shot left the beat")
 	if not await _grab(SHOT_DIR + "/park_slide.png"):
 		return false
 
-	var pit_x := TrackLayout.x_at_time(10.0)
-	for _i in 300:
-		if player.position.x > pit_x - 160.0:
-			break
-		player.force_input(1.0, false, false, false, false)
-		await get_tree().physics_frame
+	var pit_err := await _advance_to(player, TrackLayout.x_at_time(10.0), 160.0)
+	if pit_err != "":
+		return _fail(pit_err)
 	if not await _grab(SHOT_DIR + "/park_pit.png"):
 		return false
 	player.clear_force()
+	GameClock.set_process(true)
 	GameClock.stop()
 	print("shots ok")
 	return true
 
 
+## 按住左和冲刺的同时把歌曲时间往前拨。人只能跟着时钟走。
+func _advance_to(player: RunnerController, target_x: float, slack: float) -> String:
+	for _i in 520:
+		if player.position.x > target_x - slack:
+			if absf(player.position.x - TrackLayout.x_at_time(GameClock.song_time_sec)) > 1.5:
+				return "left input left the beat at %s" % player.position.x
+			return ""
+		GameClock.song_time_sec += 1.0 / 60.0
+		player.force_input(-1.0, false, false, false, true)
+		await get_tree().physics_frame
+	return "auto-run did not reach x %.0f (at %.0f)" % [target_x, player.position.x]
+
+
 func _grab_run_frame(player: RunnerController, sprite: AnimatedSprite2D, frame: int, path: String) -> bool:
 	var seen := false
 	for _i in 40:
-		player.force_input(1.0, false, false, false, false)
+		GameClock.song_time_sec += 1.0 / 60.0
+		player.force_input(-1.0, false, false, false, true)
 		await get_tree().physics_frame
 		if sprite.animation == "run" and sprite.frame == frame:
 			seen = true
