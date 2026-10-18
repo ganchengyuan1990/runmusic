@@ -49,9 +49,11 @@ animations = [{
 }]
 
 [node name="Player" type="CharacterBody2D"]
+z_index = 6
 collision_layer = 1
 collision_mask = 2
 script = ExtResource("1_runner")
+input_path = NodePath("../../InputRouter")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, 8)
@@ -60,6 +62,17 @@ shape = SubResource("RectangleShape2D_player")
 [node name="Visual" type="Node2D" parent="."]
 
 [node name="Sprite" type="AnimatedSprite2D" parent="Visual"]
+position = Vector2(0, -6)
 sprite_frames = SubResource("SpriteFrames_yier")
-animation = &"run"
-autoplay = "run"
+animation = &"idle"
+autoplay = "idle"
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(180, -36)
+position_smoothing_enabled = true
+position_smoothing_speed = 7.0
+limit_left = -180
+limit_top = -160
+limit_right = 20000
+limit_bottom = 540
+limit_smoothed = true

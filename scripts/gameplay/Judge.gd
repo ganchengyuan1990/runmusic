@@ -1,17 +1,13 @@
 extends Node
 class_name Judge
-## 输入时找最近未判定 note；|song_time - note.t| 落在窗内则命中。
-## 起步窗：Perfect ±50ms，Good ±100ms（可被谱面 windowsMs 覆盖）。
-## 超时的 jump/slide/hold 自动 Miss。布布由 BuddyCatch 单独计时，这里跳过。
+## 轻同步：身体越过谱面障碍时按歌曲时间给 Perfect / Good / 躲开。
+## 没踩在节拍上仍算躲开，不扣命。掉坑由 GameRoot 另计。
 
 signal judged(result: String, note: Dictionary, delta_ms: float)
-# result: "perfect" | "good" | "miss"
-
-enum Grade { PERFECT, GOOD, MISS }
 
 var perfect_ms: float = 50.0
 var good_ms: float = 100.0
-var _judged_indices: Dictionary = {}  # note index -> true
+var _judged_indices: Dictionary = {}
 
 
 func reset() -> void:
@@ -32,63 +28,28 @@ func unresolved_count() -> int:
 	for i in ChartLoader.notes.size():
 		if _judged_indices.has(i):
 			continue
-		if str(ChartLoader.notes[i].get("type", "")) == "buddy":
+		var ntype := ChartLoader.canonical_type(str(ChartLoader.notes[i].get("type", "")))
+		if ntype == "buddy" or ntype == "checkpoint":
 			continue
 		pending += 1
 	return pending
 
 
-## action: "jump" | "slide"。空挥不发 judged，留给超时自动 Miss。
-func try_judge(action: String, song_time: float) -> Grade:
-	var best_i := -1
-	var best_abs := INF
-	var notes := ChartLoader.notes
-	for i in notes.size():
-		if _judged_indices.has(i):
-			continue
-		var n: Dictionary = notes[i]
-		var ntype := str(n.get("type", ""))
-		if ntype == "buddy":
-			continue
-		if action == "jump" and ntype not in ["jump", "hold"]:
-			continue
-		if action == "slide" and ntype != "slide":
-			continue
-		var dt_ms := absf(song_time - float(n.get("t", 0.0))) * 1000.0
-		if dt_ms < best_abs:
-			best_abs = dt_ms
-			best_i = i
-	if best_i < 0 or best_abs > good_ms:
-		return Grade.MISS
-	_judged_indices[best_i] = true
-	var note: Dictionary = notes[best_i]
-	var grade: Grade
-	var label: String
-	if best_abs <= perfect_ms:
-		grade = Grade.PERFECT
+## 玩家在 song_time 越过这颗音符。窗内 Perfect/Good，窗外躲开。
+func submit_clear(note_index: int, song_time: float) -> void:
+	if note_index < 0 or note_index >= ChartLoader.notes.size():
+		return
+	if _judged_indices.has(note_index):
+		return
+	var note: Dictionary = ChartLoader.notes[note_index]
+	var ntype := ChartLoader.canonical_type(str(note.get("type", "")))
+	if ntype == "buddy" or ntype == "checkpoint":
+		return
+	_judged_indices[note_index] = true
+	var dt_ms := absf(song_time - float(note.get("t", 0.0))) * 1000.0
+	var label := "dodge"
+	if dt_ms <= perfect_ms:
 		label = "perfect"
-	else:
-		grade = Grade.GOOD
+	elif dt_ms <= good_ms:
 		label = "good"
-	judged.emit(label, note, best_abs)
-	return grade
-
-
-## 每帧调用。jump/slide/hold 过 Good 窗自动 Miss。
-func process_auto_misses(song_time: float) -> void:
-	var miss_after := good_ms / 1000.0
-	var notes := ChartLoader.notes
-	for i in notes.size():
-		if _judged_indices.has(i):
-			continue
-		var n: Dictionary = notes[i]
-		var t := float(n.get("t", 0.0))
-		if song_time < t:
-			continue
-		var ntype := str(n.get("type", ""))
-		if ntype == "buddy":
-			continue
-		if song_time < t + miss_after:
-			continue
-		_judged_indices[i] = true
-		judged.emit("miss", n, (song_time - t) * 1000.0)
+	judged.emit(label, note, dt_ms)

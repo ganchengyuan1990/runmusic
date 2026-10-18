@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "songId": "song_01",
   "title": "Beat Test",
   "artist": "Generated test tone",
@@ -7,371 +7,95 @@
   "bpm": 120,
   "offsetMs": 0,
   "durationSec": 60.0,
-  "approachSec": 1.5,
+  "approachSec": 4.5,
+  "pxPerSec": 280,
+  "course": "romance_park",
   "windowsMs": {
-    "perfect": 50,
-    "good": 100,
-    "buddy": 250
+    "perfect": 160,
+    "good": 380,
+    "buddy": 400
   },
   "notes": [
     {
-      "t": 2.0,
-      "type": "jump"
-    },
-    {
-      "t": 2.5,
-      "type": "slide"
-    },
-    {
-      "t": 3.0,
-      "type": "jump"
-    },
-    {
-      "t": 3.5,
-      "type": "jump"
-    },
-    {
       "t": 4.0,
-      "type": "slide"
-    },
-    {
-      "t": 4.5,
-      "type": "jump"
-    },
-    {
-      "t": 5.0,
-      "type": "jump"
-    },
-    {
-      "t": 5.5,
-      "type": "slide"
-    },
-    {
-      "t": 6.0,
-      "type": "slide"
-    },
-    {
-      "t": 6.5,
-      "type": "jump"
+      "type": "low"
     },
     {
       "t": 7.0,
-      "type": "slide"
-    },
-    {
-      "t": 7.5,
-      "type": "jump"
-    },
-    {
-      "t": 8.0,
-      "type": "jump"
+      "type": "high"
     },
     {
       "t": 10.0,
-      "type": "buddy"
-    },
-    {
-      "t": 12.0,
-      "type": "jump"
-    },
-    {
-      "t": 12.5,
-      "type": "jump"
+      "type": "pit",
+      "width": 128
     },
     {
       "t": 13.0,
-      "type": "slide"
-    },
-    {
-      "t": 13.5,
-      "type": "jump"
-    },
-    {
-      "t": 14.0,
-      "type": "jump"
-    },
-    {
-      "t": 14.5,
-      "type": "slide"
-    },
-    {
-      "t": 15.0,
-      "type": "slide"
-    },
-    {
-      "t": 15.5,
-      "type": "jump"
-    },
-    {
-      "t": 16.0,
-      "type": "jump"
+      "type": "buddy"
     },
     {
       "t": 16.5,
-      "type": "jump"
-    },
-    {
-      "t": 17.0,
-      "type": "jump"
-    },
-    {
-      "t": 17.5,
-      "type": "slide"
-    },
-    {
-      "t": 18.0,
-      "type": "slide"
-    },
-    {
-      "t": 18.5,
-      "type": "jump"
-    },
-    {
-      "t": 19.0,
-      "type": "slide"
+      "type": "platform",
+      "width": 200,
+      "height": 68
     },
     {
       "t": 19.5,
-      "type": "jump"
+      "type": "low"
     },
     {
-      "t": 20.0,
-      "type": "jump"
-    },
-    {
-      "t": 22.0,
-      "type": "buddy"
-    },
-    {
-      "t": 24.0,
-      "type": "slide"
-    },
-    {
-      "t": 24.5,
-      "type": "jump"
-    },
-    {
-      "t": 25.0,
-      "type": "slide"
+      "t": 22.5,
+      "type": "high"
     },
     {
       "t": 25.5,
-      "type": "hold",
-      "duration": 0.5
-    },
-    {
-      "t": 26.0,
-      "type": "jump"
-    },
-    {
-      "t": 26.5,
-      "type": "slide"
-    },
-    {
-      "t": 27.0,
-      "type": "jump"
-    },
-    {
-      "t": 27.5,
-      "type": "jump"
-    },
-    {
-      "t": 28.0,
-      "type": "slide"
+      "type": "pit",
+      "width": 136
     },
     {
       "t": 28.5,
-      "type": "jump"
-    },
-    {
-      "t": 29.0,
-      "type": "jump"
-    },
-    {
-      "t": 29.5,
-      "type": "slide"
-    },
-    {
-      "t": 30.0,
-      "type": "slide"
-    },
-    {
-      "t": 30.5,
-      "type": "jump"
-    },
-    {
-      "t": 31.0,
-      "type": "slide"
-    },
-    {
-      "t": 31.5,
-      "type": "jump"
+      "type": "buddy"
     },
     {
       "t": 32.0,
-      "type": "jump"
+      "type": "low"
     },
     {
-      "t": 32.5,
-      "type": "slide"
-    },
-    {
-      "t": 33.0,
-      "type": "slide"
-    },
-    {
-      "t": 33.5,
-      "type": "hold",
-      "duration": 0.5
-    },
-    {
-      "t": 34.0,
-      "type": "slide"
-    },
-    {
-      "t": 36.0,
-      "type": "buddy"
+      "t": 35.0,
+      "type": "platform",
+      "width": 210,
+      "height": 72
     },
     {
       "t": 38.0,
-      "type": "jump"
-    },
-    {
-      "t": 38.5,
-      "type": "slide"
-    },
-    {
-      "t": 39.0,
-      "type": "slide"
-    },
-    {
-      "t": 39.5,
-      "type": "jump"
-    },
-    {
-      "t": 40.0,
-      "type": "jump"
-    },
-    {
-      "t": 40.5,
-      "type": "jump"
+      "type": "high"
     },
     {
       "t": 41.0,
-      "type": "jump"
-    },
-    {
-      "t": 41.5,
-      "type": "slide"
-    },
-    {
-      "t": 42.0,
-      "type": "slide"
-    },
-    {
-      "t": 42.5,
-      "type": "jump"
-    },
-    {
-      "t": 43.0,
-      "type": "slide"
-    },
-    {
-      "t": 43.5,
-      "type": "jump"
+      "type": "pit",
+      "width": 128
     },
     {
       "t": 44.0,
-      "type": "jump"
-    },
-    {
-      "t": 44.5,
-      "type": "slide"
-    },
-    {
-      "t": 45.0,
-      "type": "jump"
-    },
-    {
-      "t": 45.5,
-      "type": "jump"
-    },
-    {
-      "t": 46.0,
-      "type": "slide"
-    },
-    {
-      "t": 46.5,
-      "type": "jump"
-    },
-    {
-      "t": 47.0,
-      "type": "jump"
-    },
-    {
-      "t": 47.5,
-      "type": "slide"
-    },
-    {
-      "t": 48.0,
-      "type": "slide"
-    },
-    {
-      "t": 50.0,
       "type": "buddy"
     },
     {
-      "t": 52.0,
-      "type": "slide"
+      "t": 47.5,
+      "type": "low"
     },
     {
-      "t": 52.5,
-      "type": "jump"
-    },
-    {
-      "t": 53.0,
-      "type": "jump"
-    },
-    {
-      "t": 53.5,
-      "type": "slide"
+      "t": 50.5,
+      "type": "high"
     },
     {
       "t": 54.0,
-      "type": "slide"
-    },
-    {
-      "t": 54.5,
-      "type": "jump"
-    },
-    {
-      "t": 55.0,
-      "type": "slide"
-    },
-    {
-      "t": 55.5,
-      "type": "jump"
-    },
-    {
-      "t": 56.0,
-      "type": "jump"
-    },
-    {
-      "t": 56.5,
-      "type": "slide"
-    },
-    {
-      "t": 57.0,
-      "type": "slide"
+      "type": "platform",
+      "width": 190,
+      "height": 64
     },
     {
       "t": 57.5,
-      "type": "hold",
-      "duration": 0.5
-    },
-    {
-      "t": 58.0,
-      "type": "slide"
+      "type": "low"
     }
   ]
 }

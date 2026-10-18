@@ -1,6 +1,6 @@
 extends Area2D
 class_name Obstacle
-## 池化障碍实例模板。由 ObstacleSpawner.setup_from_note 配置。
+## 旧三轨滚动障碍。恋爱公园改由 ParkCourse 按谱面铺 StaticBody，本场景不再挂进 Game。
 
 const Layout = preload("res://scripts/gameplay/TrackLayout.gd")
 const Palette = preload("res://scripts/ui/ArtPalette.gd")
@@ -28,7 +28,7 @@ func setup_from_note(n: Dictionary, index: int) -> void:
 	note_index = index
 	hit_time = float(n.get("t", 0.0))
 	note_type = str(n.get("type", "jump"))
-	position.y = Layout.LANE_Y
+	position.y = Layout.GROUND_Y
 	position.x = Layout.SPAWN_X
 	visible = true
 	_apply_visual()
@@ -51,7 +51,7 @@ func _process(_delta: float) -> void:
 	var u := 1.0
 	if approach > 0.0:
 		u = clampf((song_t - (hit_time - approach)) / approach, 0.0, 1.6)
-	position.y = Layout.LANE_Y
+	position.y = Layout.GROUND_Y
 	position.x = lerpf(Layout.SPAWN_X, Layout.HIT_X, u)
 
 

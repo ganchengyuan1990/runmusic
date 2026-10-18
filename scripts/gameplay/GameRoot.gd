@@ -11,8 +11,8 @@ const WavLib = preload("res://scripts/audio/WavStream.gd")
 
 @onready var music: AudioStreamPlayer = $MusicPlayer
 @onready var sfx: AudioStreamPlayer = $SfxPlayer
-@onready var spawner: ObstacleSpawner = $World/ObstacleSpawner
-@onready var pool: ObstaclePool = $World/ObstaclePool
+@onready var runner: RunnerController = $World/Player
+@onready var park: ParkCourse = $World/ParkCourse
 @onready var judge: Judge = $Judge
 @onready var score_tracker: ScoreTracker = $ScoreTracker
 @onready var input_router: InputRouter = $InputRouter
@@ -44,8 +44,10 @@ func _ready() -> void:
 		judge.reset()
 	if score_tracker:
 		score_tracker.reset()
-	if spawner:
-		spawner.reset_for_chart()
+	if park:
+		park.build_from_chart(runner, judge)
+	if runner and not runner.pit_fallen.is_connected(_on_pit):
+		runner.pit_fallen.connect(_on_pit)
 	if buddy_catch:
 		buddy_catch.reset_for_chart()
 		if not buddy_catch.caught.is_connected(_on_kiss):
@@ -64,8 +66,6 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if _ended or not GameClock.is_playing:
 		return
-	if judge:
-		judge.process_auto_misses(GameClock.song_time_sec)
 	if _lives <= 0 or _chart_finished():
 		_end_run()
 
@@ -115,6 +115,25 @@ func _on_judged(result: String, note: Dictionary, _delta_ms: float) -> void:
 	if hud:
 		hud.flash_judge(result)
 	_play_sfx(result)
+
+
+func _on_pit() -> void:
+	if _ended:
+		return
+	_lives = maxi(_lives - 1, 0)
+	if score_tracker:
+		score_tracker.register_hit("miss")
+	if hud:
+		hud.set_lives(_lives)
+		hud.flash_judge("掉落")
+	if _lives <= 0:
+		_end_run()
+		return
+	var spot := Vector2(TrackLayout.START_X, TrackLayout.stand_y())
+	if park and runner:
+		spot = park.current_checkpoint(runner.position.x)
+	if runner:
+		runner.respawn_at(spot)
 
 
 func _on_kiss() -> void:
