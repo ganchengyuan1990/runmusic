@@ -299,7 +299,7 @@ func _grab_run_frame(player: RunnerController, sprite: AnimatedSprite2D, frame: 
 	return ok
 
 
-## 跳图的尾巴尖必须和身体连在同一块不透明像素上。
+## 跳图的尾巴必须是一整条：尖端和身体相连，中段绒毛也不能被横向切掉。
 func _jump_tail_connected() -> bool:
 	var tex := load("res://assets/characters/yier_jump.png") as Texture2D
 	if tex == null:
@@ -337,7 +337,31 @@ func _jump_tail_connected() -> bool:
 		stack.append(Vector2i(p.x - 1, p.y))
 		stack.append(Vector2i(p.x, p.y + 1))
 		stack.append(Vector2i(p.x, p.y - 1))
-	return reached_tip
+	# 只连通还不够：上一版用细桥把断掉的尖端连上，切面还在。
+	# 健康中段的浅色绒毛左右缘要连续，不能突然缺掉左边一块。
+	return reached_tip and _jump_tail_shaft_smooth(img)
+
+
+func _jump_tail_shaft_smooth(img: Image) -> bool:
+	var prev_l := -1
+	var prev_r := -1
+	for y in range(84, 104):
+		var left := -1
+		var right := -1
+		var limit := img.get_width()
+		for x in range(60, limit):
+			var c := img.get_pixel(x, y)
+			if c.a > 0.7 and c.r + c.g + c.b > 1.7:
+				if left < 0:
+					left = x
+				right = x
+		if left < 0 or right - left < 22:
+			return false
+		if prev_l >= 0 and (absi(left - prev_l) > 6 or absi(right - prev_r) > 6):
+			return false
+		prev_l = left
+		prev_r = right
+	return true
 
 
 func _grab(path: String) -> bool:
