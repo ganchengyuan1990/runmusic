@@ -2,6 +2,7 @@ extends CharacterBody2D
 class_name RunnerController
 ## 一二。重力、左右跑、按住跳得更高、短滑铲。相机挂在身上跟着走。
 ## 亲亲 soft_freeze 时丢掉移动和重力，避免停在坑边时掉下去。
+## 听歌打点的试玩把横坐标锁在歌曲时间上，跳和滑铲仍走原来的键。
 
 signal jumped
 signal slid
@@ -30,6 +31,8 @@ var _force_jump_held: bool = false
 var _force_jump_pressed: bool = false
 var _force_slide: bool = false
 var _force_sprint: bool = false
+## 试玩：水平位置跟 GameClock，不再靠按住右跑去对拍。
+var clock_locked: bool = false
 
 @onready var _visual: Node2D = $Visual
 
@@ -118,8 +121,12 @@ func _physics_process(delta: float) -> void:
 	if slide_pressed and is_on_floor() and not _sliding and not jumped_now:
 		_start_slide()
 
-	var speed := Layout.SPRINT_SPEED if sprint else Layout.RUN_SPEED
-	if _sliding:
+	var lock_x := clock_locked and GameClock.is_playing
+	var speed := Layout.px_per_sec() if lock_x else (Layout.SPRINT_SPEED if sprint else Layout.RUN_SPEED)
+	if lock_x:
+		facing = 1
+		velocity.x = 0.0
+	elif _sliding:
 		velocity.x = float(facing) * speed * 1.05
 	else:
 		velocity.x = axis * speed
@@ -133,6 +140,10 @@ func _physics_process(delta: float) -> void:
 
 	floor_snap_length = 0.0 if velocity.y < 0.0 else 8.0
 	move_and_slide()
+	if lock_x:
+		# 物理步长和音频钟会漂。试玩直接把脚放到这一拍的世界坐标上。
+		position.x = Layout.x_at_time(GameClock.song_time_sec)
+		velocity.x = speed
 	_update_facing()
 	_update_pose()
 
@@ -178,8 +189,24 @@ func clear_force() -> void:
 	_force_sprint = false
 
 
+func set_clock_locked(enabled: bool) -> void:
+	clock_locked = enabled
+
+
+func recovery_left() -> float:
+	return _invuln
+
+
+## 试玩掉坑后只要人还在缺口上方，就把无敌维持在 min_sec，避免同一拍连扣命。
+func keep_recovery(min_sec: float) -> void:
+	_invuln = maxf(_invuln, min_sec)
+
+
 func respawn_at(world_pos: Vector2) -> void:
 	position = world_pos
+	if clock_locked and GameClock.is_playing and not GameClock.is_soft_frozen():
+		position.x = Layout.x_at_time(GameClock.song_time_sec)
+		facing = 1
 	velocity = Vector2.ZERO
 	_fallen = false
 	_invuln = 0.75

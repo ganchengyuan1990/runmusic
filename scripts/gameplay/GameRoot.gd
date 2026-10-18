@@ -50,6 +50,12 @@ func _ready() -> void:
 		score_tracker.reset()
 	if park:
 		park.build_from_chart(runner, judge)
+	if runner:
+		# 默认 song_01 仍是自由跑。只有打点试玩（以及结算里再来一次）跟歌曲走。
+		var follow_song := _chart_file != DEFAULT_CHART
+		runner.set_clock_locked(follow_song)
+		if follow_song:
+			print("GameRoot: clock-locked run")
 	if runner and not runner.pit_fallen.is_connected(_on_pit):
 		runner.pit_fallen.connect(_on_pit)
 	if buddy_catch:
