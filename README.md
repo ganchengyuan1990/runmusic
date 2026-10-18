@@ -17,10 +17,29 @@
 
 ### 换成自己的歌
 
-1. 把文件放到 `assets/audio/bgm/song_01.ogg`（有这个文件时优先于测试音）。  
+标题里点 **听歌打点**，加载 ogg / wav / mp3，跟着敲，导出 JSON，再点 **试玩**。步骤见下一节。
+
+手里已经有谱时，也可以继续手工改 `charts/song_01.json`：
+
+1. 把文件放到 `assets/audio/bgm/song_01.ogg`（有这个文件时，默认局优先于测试音；打点试玩不会被它盖掉）。  
 2. 用 Godot 打开工程，让它导入 ogg。  
-3. 若长度不是 60 秒，改 `charts/song_01.json` 的 `durationSec`，并按拍改 `notes` / `bpm`。`pxPerSec` 是「按住右跑、不冲刺」时的世界速度，障碍横坐标跟它对齐。  
+3. 若长度不是 60 秒，改 `durationSec`，并按拍改 `notes` / `bpm`。`pxPerSec` 是「按住右跑、不冲刺」时的世界速度，障碍横坐标跟它对齐。  
 4. 测试音可随时用 `python3 tools/gen_test_tone.py` 再生成（正弦嘀声，公共领域）。
+
+### 听歌打点
+
+运行主场景后点 **听歌打点**，或在编辑器里直接打开 `scenes/tools/ChartTap.tscn`（F6）。不改游戏键位，也不改默认的 `song_01`。
+
+1. **加载音频**。WAV 会画波形；ogg / mp3 只画 BPM 拍线。也可以把文件拖进窗口。  
+2. **播放**，在听到的位置点下去。默认键：**1** 矮丛、**2** 花门、**3** 坑、**4** 平台、**5** 布布。点音符按钮再按一个键可以改键，记在 `user://chart_tap.cfg`。  
+3. **Z** 撤销，**X** 删掉播放头附近的音符，**Tab** 循环类型，**[ ]** 调坑和平台的宽度。勾选 **吸附** 时，落点吸到整拍或 1/2、1/4。  
+4. **导出 JSON**。`schemaVersion` 是 1，字段和 `charts/song_01.json` 一样，`ChartLoader` 能直接读。坑带 `width`，平台带 `width` 和 `height`。  
+5. **试玩** 把谱写到 `user://charts/preview.json` 并进公园。结算里「再来一次」还是这首。回标题后 **开始游戏** 仍是 `song_01`。  
+6. **加载谱面** 可以接着改已经导出的 JSON，或仓库里的 `charts/song_01.json`。
+
+`offsetMs` 只影响局内判定时钟，不改你点下去的时刻。听着准就保持 0。
+
+滚轮缩放时间轴，点空白处跳转，点音符选中。左右方向键移动播放头。
 
 ### 校准
 
@@ -102,8 +121,8 @@ res://
 ├── project.godot
 ├── charts/song_01.json
 ├── assets/audio|art|fonts|characters/
-├── scenes/boot|title|calibration|game|results/
-├── scripts/autoload|gameplay|input|ui/
+├── scenes/boot|title|calibration|game|results|tools/
+├── scripts/autoload|gameplay|input|ui|tools/
 └── tests/mvp_probe.gd
 ```
 
