@@ -1,9 +1,23 @@
 extends Node
 ## 加载 / 校验 JSON 谱面；提供按时间查询的音符队列。
 
-const ALLOWED_TYPES := ["jump", "slide", "hold", "buddy"]
-const SCHEMA_VERSION := 2
-const MID_LANE := 1
+const ALLOWED_TYPES := ["jump", "slide", "block", "hold", "buddy", "low", "high", "pit", "platform", "checkpoint"]
+const SCHEMA_VERSION := 1
+
+
+## 公园关卡把旧音符名收成同一套：矮丛 / 花门 / 坑 / 平台 / 布布。
+func canonical_type(ntype: String) -> String:
+	match ntype:
+		"jump", "low":
+			return "low"
+		"slide", "high":
+			return "high"
+		"block", "pit":
+			return "pit"
+		"hold", "platform":
+			return "platform"
+		_:
+			return ntype
 
 ## 当前已加载谱面（Dictionary）；未加载时为空。
 var chart: Dictionary = {}
@@ -57,7 +71,7 @@ func validate_chart(data: Dictionary) -> bool:
 		_fail("notes must be array")
 		return false
 	var duration := float(data.get("durationSec", 0.0))
-	var seen: Dictionary = {}  # t -> true
+	var seen: Dictionary = {}
 	var prev_t := -INF
 	for i in note_list.size():
 		var n = note_list[i]
@@ -65,18 +79,20 @@ func validate_chart(data: Dictionary) -> bool:
 			_fail("notes[%d] must be object" % i)
 			ok = false
 			continue
-		var note: Dictionary = n
-		var t := float(note.get("t", -1.0))
-		var ntype := str(note.get("type", ""))
+		var t := float(n.get("t", -1.0))
+		var ntype := str(n.get("type", ""))
+		var kind := canonical_type(ntype)
 		if t < 0.0:
 			_fail("notes[%d].t invalid" % i)
 			ok = false
 		if t >= duration + 1.0:
 			_fail("notes[%d].t >= durationSec+1" % i)
 			ok = false
-		# lane 可选。写了就忽略具体值，收成中轨（旧的 0..2 不再分轨）。
-		if note.has("lane"):
-			note["lane"] = MID_LANE
+		if n.has("lane"):
+			var lane := int(n.get("lane", -1))
+			if lane < 0 or lane > 2:
+				_fail("notes[%d].lane must be 0..2" % i)
+				ok = false
 		if ntype not in ALLOWED_TYPES:
 			_fail("notes[%d].type unknown: %s" % [i, ntype])
 			ok = false
@@ -84,13 +100,19 @@ func validate_chart(data: Dictionary) -> bool:
 			_fail("notes not ascending by t at index %d" % i)
 			ok = false
 		prev_t = t
-		var key := "%.6f" % t
+		var key := "%.6f|%s" % [t, kind]
 		if seen.has(key):
-			_fail("duplicate note at t=%s" % t)
+			_fail("duplicate note at t=%s type=%s" % [t, kind])
 			ok = false
 		seen[key] = true
-		if ntype == "hold" and not note.has("duration"):
-			_fail("notes[%d] hold missing duration" % i)
+		if kind == "platform" and not n.has("duration") and not n.has("width"):
+			_fail("notes[%d] platform missing width or duration" % i)
+			ok = false
+		if n.has("width") and float(n.get("width", 0.0)) <= 0.0:
+			_fail("notes[%d].width must be > 0" % i)
+			ok = false
+		if n.has("height") and float(n.get("height", 0.0)) <= 0.0:
+			_fail("notes[%d].height must be > 0" % i)
 			ok = false
 	return ok
 
