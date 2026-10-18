@@ -2,9 +2,10 @@ extends Node
 class_name Judge
 ## 输入时找最近未判定 note；|song_time - note.t| 落在窗内则命中。
 ## 起步窗：Perfect ±50ms，Good ±100ms（可被谱面 windowsMs 覆盖）。
+## 超时的 jump/slide/hold 自动 Miss；block 在 t 时刻与玩家同车道则 Miss，否则算躲开。
 
 signal judged(result: String, note: Dictionary, delta_ms: float)
-# result: "perfect" | "good" | "miss"
+# result: "perfect" | "good" | "miss" | "dodge"
 
 enum Grade { PERFECT, GOOD, MISS }
 
@@ -26,7 +27,15 @@ func _apply_windows_from_chart() -> void:
 		good_ms = float(w["good"])
 
 
-## action: "jump" | "slide" | "lane" 等；lane 为当前车道。
+func unresolved_count() -> int:
+	var pending := 0
+	for i in ChartLoader.notes.size():
+		if not _judged_indices.has(i):
+			pending += 1
+	return pending
+
+
+## action: "jump" | "slide"；lane 为当前车道。空挥不发 judged，留给超时自动 Miss。
 func try_judge(action: String, lane: int, song_time: float) -> Grade:
 	var best_i := -1
 	var best_abs := INF
@@ -37,7 +46,6 @@ func try_judge(action: String, lane: int, song_time: float) -> Grade:
 		var n: Dictionary = notes[i]
 		if int(n.get("lane", -1)) != lane:
 			continue
-		# MVP：block 用变道躲开，不在此「点按」判定；jump/slide/hold 对动作
 		var ntype := str(n.get("type", ""))
 		if ntype == "block":
 			continue
@@ -50,7 +58,6 @@ func try_judge(action: String, lane: int, song_time: float) -> Grade:
 			best_abs = dt_ms
 			best_i = i
 	if best_i < 0 or best_abs > good_ms:
-		# 无匹配：可能是空挥；Miss 留给超时自动 Miss
 		return Grade.MISS
 	_judged_indices[best_i] = true
 	var note: Dictionary = notes[best_i]
@@ -59,16 +66,34 @@ func try_judge(action: String, lane: int, song_time: float) -> Grade:
 	if best_abs <= perfect_ms:
 		grade = Grade.PERFECT
 		label = "perfect"
-	elif best_abs <= good_ms:
+	else:
 		grade = Grade.GOOD
 		label = "good"
-	else:
-		grade = Grade.MISS
-		label = "miss"
-	judged.emit(label, note, best_abs if grade != Grade.MISS else best_abs)
+	judged.emit(label, note, best_abs)
 	return grade
 
 
-## TODO(Phase 1): 每帧扫描超时未点的 jump/slide → 自动 Miss；block 与玩家车道重叠 → Miss/扣盾
-func process_auto_misses(song_time: float) -> void:
-	pass
+## 每帧调用。jump/slide/hold 过 Good 窗自动 Miss；block 在 note.t 与玩家车道重叠则 Miss。
+func process_auto_misses(song_time: float, runner_lane: int) -> void:
+	var miss_after := good_ms / 1000.0
+	var notes := ChartLoader.notes
+	for i in notes.size():
+		if _judged_indices.has(i):
+			continue
+		var n: Dictionary = notes[i]
+		var t := float(n.get("t", 0.0))
+		if song_time < t:
+			continue
+		var ntype := str(n.get("type", ""))
+		if ntype == "block":
+			_judged_indices[i] = true
+			var delta_ms := (song_time - t) * 1000.0
+			if int(n.get("lane", -1)) == runner_lane:
+				judged.emit("miss", n, delta_ms)
+			else:
+				judged.emit("dodge", n, delta_ms)
+			continue
+		if song_time < t + miss_after:
+			continue
+		_judged_indices[i] = true
+		judged.emit("miss", n, (song_time - t) * 1000.0)

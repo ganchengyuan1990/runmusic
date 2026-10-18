@@ -51,6 +51,7 @@ position = Vector2(0, 0)
 [node name="ObstaclePool" type="Node" parent="World"]
 script = ExtResource("5_pool")
 obstacle_scene = ExtResource("4_obstacle")
+obstacle_root_path = NodePath("../ObstacleRoot")
 initial_size = 16
 
 [node name="ObstacleSpawner" type="Node" parent="World"]

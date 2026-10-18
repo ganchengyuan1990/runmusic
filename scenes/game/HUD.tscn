@@ -18,17 +18,28 @@ mouse_filter = 2
 layout_mode = 0
 offset_left = 16.0
 offset_top = 16.0
-offset_right = 220.0
+offset_right = 280.0
 offset_bottom = 40.0
+mouse_filter = 2
 text = "分数 0"
 
 [node name="ComboLabel" type="Label" parent="Root"]
 layout_mode = 0
 offset_left = 16.0
 offset_top = 44.0
-offset_right = 220.0
+offset_right = 280.0
 offset_bottom = 68.0
+mouse_filter = 2
 text = "连击 0"
+
+[node name="LivesLabel" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 72.0
+offset_right = 280.0
+offset_bottom = 96.0
+mouse_filter = 2
+text = "生命 3"
 
 [node name="JudgeLabel" type="Label" parent="Root"]
 layout_mode = 1
@@ -41,5 +52,6 @@ offset_left = -60.0
 offset_top = -80.0
 offset_right = 60.0
 offset_bottom = -56.0
+mouse_filter = 2
 text = ""
 horizontal_alignment = 1
