@@ -50,7 +50,7 @@ Title → **校准 Offset**。
 | 一二 | 玩家 | 白熊猫，圆头、黑耳、黑眼圈 |
 | 布布 | 可接住的搭档 | 棕熊猫，从右侧靠近 |
 
-占位是工程里的色块，不是商业作品的官方立绘。名字用在界面和说明里；授权由项目方自行处理。造型只作气质参考。
+一二和布布用的是 `assets/characters/` 里的 128×128 手绘占位图（见同目录 `MANIFEST.md`），不是商业作品的官方立绘。名字用在界面和说明里；授权由项目方自行处理。换成正式立绘时，覆盖同名文件即可：`yier_idle.png`、`yier_run_01.png`、`yier_run_02.png`、`yier_jump.png`、`yier_slide.png`、`bubu_idle.png`、`bubu_approach.png`、`vfx_heart.png`。
 
 ### 美术方向 C
 
@@ -132,7 +132,7 @@ res://
 5. **音效**：Perfect / Good / Miss 播放 `assets/audio/sfx/` 里的短嘀声。HUD 的分数、连击、生命在音频时钟下同样更新。  
 6. **横版**：赛道、判定线、障碍走向、触屏分区和标题/校准/结算都按 1280×720 侧视排列。谱面里的 `lane` 仍是 0/1/2，0 在上、2 在下。方向 C 的纸感底和一二 / 布布占位已接上。布布用音符类型 `buddy`。
 
-仍可后做：一二的跑步两帧、跳、滑正式图，Windows / Android 导出。没有谱面编辑器，也不会自动侦测 BPM。
+仍可后做：用正式立绘覆盖 `assets/characters/` 里的同名占位图，Windows / Android 导出。没有谱面编辑器，也不会自动侦测 BPM。
 
 ---
 
