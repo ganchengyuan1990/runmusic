@@ -1,0 +1,32 @@
+extends Control
+class_name ResultsUI
+## 结算屏：分数、连击、Perfect/Good/Miss。
+
+signal retry_pressed
+signal title_pressed
+
+@onready var _score_label: Label = $VBox/ScoreLabel
+@onready var _combo_label: Label = $VBox/ComboLabel
+@onready var _stats_label: Label = $VBox/StatsLabel
+@onready var _btn_retry: Button = $VBox/Buttons/RetryButton
+@onready var _btn_title: Button = $VBox/Buttons/TitleButton
+
+
+func _ready() -> void:
+	if _btn_retry:
+		_btn_retry.pressed.connect(func(): retry_pressed.emit())
+	if _btn_title:
+		_btn_title.pressed.connect(func(): title_pressed.emit())
+
+
+func show_results(data: Dictionary) -> void:
+	if _score_label:
+		_score_label.text = "分数：%d" % int(data.get("score", 0))
+	if _combo_label:
+		_combo_label.text = "最大连击：%d" % int(data.get("max_combo", 0))
+	if _stats_label:
+		_stats_label.text = "Perfect %d  |  Good %d  |  Miss %d" % [
+			int(data.get("perfect", 0)),
+			int(data.get("good", 0)),
+			int(data.get("miss", 0)),
+		]

@@ -1,0 +1,35 @@
+# Godot 4+
+.godot/
+.import/
+
+# Import cache (optional: some teams commit *.import for consistent imports)
+# *.import
+
+# Export
+export_presets.cfg
+*.apk
+*.aab
+*.exe
+*.pck
+*.zip
+*.dmg
+*.app
+*.xcframework
+
+# Secrets / signing (never commit)
+*.keystore
+*.jks
+android/build/
+*.mobileprovision
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Mono / C# (if added later)
+.mono/
+data_*/

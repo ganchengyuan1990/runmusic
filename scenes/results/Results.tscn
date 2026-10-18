@@ -1,0 +1,68 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/ResultsScene.gd" id="1_res_scene"]
+[ext_resource type="Script" path="res://scripts/ui/ResultsUI.gd" id="2_res_ui"]
+
+[node name="Results" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_res_scene")
+
+[node name="ResultsUI" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_res_ui")
+
+[node name="VBox" type="VBoxContainer" parent="ResultsUI"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -180.0
+offset_top = -120.0
+offset_right = 180.0
+offset_bottom = 120.0
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="ResultsUI/VBox"]
+layout_mode = 2
+text = "结算"
+horizontal_alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="ResultsUI/VBox"]
+layout_mode = 2
+text = "分数：0"
+horizontal_alignment = 1
+
+[node name="ComboLabel" type="Label" parent="ResultsUI/VBox"]
+layout_mode = 2
+text = "最大连击：0"
+horizontal_alignment = 1
+
+[node name="StatsLabel" type="Label" parent="ResultsUI/VBox"]
+layout_mode = 2
+text = "Perfect 0  |  Good 0  |  Miss 0"
+horizontal_alignment = 1
+
+[node name="Buttons" type="HBoxContainer" parent="ResultsUI/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="RetryButton" type="Button" parent="ResultsUI/VBox/Buttons"]
+layout_mode = 2
+text = "再来一次"
+
+[node name="TitleButton" type="Button" parent="ResultsUI/VBox/Buttons"]
+layout_mode = 2
+text = "回标题"
