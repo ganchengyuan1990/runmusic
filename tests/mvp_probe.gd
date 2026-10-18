@@ -1,5 +1,5 @@
 extends Node
-## 无头检查跑跳、滑铲、掉坑、亲亲冻结、接住布布加命和谱面铺关。
+## 无头检查跑跳、滑铲、掉坑、亲亲冻结、接住布布加命、布布停留和谱面铺关。
 ## 带 --shots 时再用 OpenGL 视口截恋爱公园。
 ## 作为场景运行（不要 --script），自动加载才在编译期可见。
 
@@ -179,6 +179,8 @@ func _logic() -> bool:
 
 	if not await _kiss_life(host):
 		return false
+	if not await _buddy_hold(host):
+		return false
 	print("logic ok")
 	return true
 
@@ -237,6 +239,132 @@ func _kiss_life(host: Node) -> bool:
 	game.queue_free()
 	print("kiss life ok")
 	return true
+
+
+## 慢 3.5 秒的人在旧逻辑里会在进画面的同一帧把布布清掉。她现在要留到人跑过。
+func _buddy_hold(host: Node) -> bool:
+	# 上一局 queue_free 要等帧末才走 _exit_tree。先让它停钟，再开新局。
+	for _i in 3:
+		await get_tree().process_frame
+	var game: Node = load("res://scenes/game/Game.tscn").instantiate()
+	host.add_child(game)
+	for _i in 20:
+		await get_tree().process_frame
+		if GameClock.is_playing:
+			break
+	if not GameClock.is_playing:
+		return _fail("buddy hold: clock did not start")
+	GameClock.soft_freeze()
+	var player: RunnerController = game.get_node("World/Player")
+	var buddy: Node2D = game.get_node("World/Buddy")
+	var catcher: BuddyCatch = game.get_node("BuddyCatch")
+	var hud: GameHUD = game.get_node("HUD")
+	var hit := 13.0
+	var anchor_x := TrackLayout.x_at_time(hit)
+	var late := 3.5
+	var kisses := {"n": 0}
+	var brushes := {"n": 0}
+	var brush_t := {"t": -1.0}
+	catcher.caught.connect(func(): kisses["n"] += 1)
+	catcher.brushed.connect(func():
+		brushes["n"] += 1
+		brush_t["t"] = GameClock.song_time_sec
+	)
+	var first_on := -1.0
+	var last_on := -1.0
+	var saw_after_window := false
+	var seen_vis := false
+	var i := 0
+	while i <= 460:
+		var t := i * 0.05
+		GameClock.song_time_sec = t
+		player.position = Vector2(TrackLayout.x_at_time(t - late), TrackLayout.stand_y())
+		player.velocity = Vector2.ZERO
+		await get_tree().process_frame
+		if absf(t - (hit + 0.5)) <= 0.026:
+			saw_after_window = true
+			if not buddy.visible:
+				return _fail("buddy hidden %.2fs after the beat while player is still behind" % (t - hit))
+			if absf(buddy.position.x - anchor_x) > 200.0:
+				return _fail("buddy left her mark at x=%.0f (anchor %.0f)" % [buddy.position.x, anchor_x])
+		if buddy.visible:
+			seen_vis = true
+		elif seen_vis and brushes["n"] == 0:
+			return _fail("buddy hidden at t=%.2f before the miss resolved" % t)
+		var on := _buddy_in_view(player, buddy)
+		if on:
+			if first_on < 0.0:
+				first_on = t
+			last_on = t
+		if brushes["n"] > 0:
+			break
+		i += 1
+	var held := last_on - first_on
+	print("buddy late hold %.2fs (%.2f..%.2f) brush_t=%.2f" % [held, first_on, last_on, brush_t["t"]])
+	if not saw_after_window:
+		return _fail("late run never sampled the post-window frame")
+	if first_on < 0.0 or held < 2.0:
+		return _fail("late buddy on screen only %.2fs" % held)
+	if kisses["n"] != 0:
+		return _fail("late pass should not kiss")
+	if brushes["n"] != 1:
+		return _fail("late pass brushes %s" % brushes["n"])
+	if brush_t["t"] < hit + 1.5:
+		return _fail("brush fired too early at %.2f" % brush_t["t"])
+	if hud.lives_label.text != "生命 3":
+		return _fail("late brush changed lives to %s" % hud.lives_label.text)
+
+	GameClock.song_time_sec = 0.0
+	player.position = Vector2(TrackLayout.START_X, TrackLayout.stand_y())
+	catcher.reset_for_chart()
+	var pace_kisses := {"n": 0}
+	catcher.caught.connect(func(): pace_kisses["n"] += 1)
+	var pace_first := -1.0
+	var pace_catch := -1.0
+	var pace_gap := false
+	i = 0
+	while i <= 280:
+		var t := i * 0.05
+		GameClock.song_time_sec = t
+		player.position = Vector2(TrackLayout.x_at_time(t), TrackLayout.stand_y())
+		player.velocity = Vector2.ZERO
+		await get_tree().process_frame
+		var on := _buddy_in_view(player, buddy)
+		if pace_kisses["n"] > 0:
+			pace_catch = t
+			break
+		if on:
+			if pace_first < 0.0:
+				pace_first = t
+		elif pace_first >= 0.0:
+			pace_gap = true
+			break
+		i += 1
+	var pace_held := pace_catch - pace_first
+	print("buddy pace hold %.2fs until kiss (%.2f..%.2f)" % [pace_held, pace_first, pace_catch])
+	if pace_gap or pace_first < 0.0 or pace_catch < 0.0 or pace_held < 3.0:
+		return _fail("on-pace approach %.2fs gap=%s" % [pace_held, pace_gap])
+	if not buddy.visible:
+		return _fail("buddy hidden at the moment of the kiss")
+	GameClock.stop()
+	game.queue_free()
+	await get_tree().process_frame
+	print("buddy hold ok")
+	return true
+
+
+func _buddy_in_view(player: Node2D, buddy: Node2D) -> bool:
+	if not buddy.visible:
+		return false
+	var cam := player.get_node("Camera2D") as Camera2D
+	var center := player.global_position + cam.position
+	var half := Vector2(640.0, 360.0)
+	var sprite := buddy.get_node_or_null("Sprite") as Sprite2D
+	var pad := 64.0
+	if sprite and sprite.texture:
+		pad = maxf(sprite.texture.get_width(), sprite.texture.get_height()) * 0.5
+	var bp := buddy.global_position
+	return absf(bp.x - center.x) <= half.x + pad and absf(bp.y - center.y) <= half.y + pad
 
 
 func _jump_rise(player: RunnerController, hold: bool) -> float:
