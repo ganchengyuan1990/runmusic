@@ -1,34 +1,587 @@
 {
   "schemaVersion": 1,
   "songId": "song_01",
-  "title": "Demo Track",
-  "artist": "Yourself",
-  "audio": "res://assets/audio/bgm/song_01.ogg",
-  "bpm": 128,
+  "title": "Beat Test",
+  "artist": "Generated test tone",
+  "audio": "res://assets/audio/bgm/song_01_test.wav",
+  "bpm": 120,
   "offsetMs": 0,
-  "durationSec": 120.0,
+  "durationSec": 60.0,
   "approachSec": 1.5,
-  "windowsMs": { "perfect": 50, "good": 100 },
+  "windowsMs": {
+    "perfect": 50,
+    "good": 100
+  },
   "notes": [
-    { "t": 2.000, "lane": 1, "type": "jump" },
-    { "t": 2.469, "lane": 0, "type": "slide" },
-    { "t": 2.938, "lane": 2, "type": "block" },
-    { "t": 3.406, "lane": 1, "type": "jump" },
-    { "t": 4.344, "lane": 1, "type": "hold", "duration": 0.75 },
-    { "t": 5.281, "lane": 0, "type": "block" },
-    { "t": 5.750, "lane": 2, "type": "jump" },
-    { "t": 6.219, "lane": 1, "type": "slide" },
-    { "t": 7.156, "lane": 1, "type": "jump" },
-    { "t": 7.625, "lane": 0, "type": "block" },
-    { "t": 8.094, "lane": 2, "type": "slide" },
-    { "t": 8.563, "lane": 1, "type": "jump" },
-    { "t": 9.500, "lane": 1, "type": "block" },
-    { "t": 10.438, "lane": 0, "type": "jump" },
-    { "t": 10.906, "lane": 2, "type": "jump" },
-    { "t": 11.844, "lane": 1, "type": "slide" },
-    { "t": 12.781, "lane": 1, "type": "hold", "duration": 1.0 },
-    { "t": 14.188, "lane": 0, "type": "block" },
-    { "t": 14.656, "lane": 2, "type": "block" },
-    { "t": 15.125, "lane": 1, "type": "jump" }
+    {
+      "t": 2.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 2.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 3.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 3.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 4.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 4.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 5.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 5.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 6.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 6.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 7.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 7.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 8.0,
+      "lane": 1,
+      "type": "block"
+    },
+    {
+      "t": 8.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 9.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 9.5,
+      "lane": 1,
+      "type": "hold",
+      "duration": 0.5
+    },
+    {
+      "t": 10.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 10.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 11.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 11.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 12.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 12.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 13.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 13.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 14.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 14.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 15.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 15.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 16.0,
+      "lane": 1,
+      "type": "block"
+    },
+    {
+      "t": 16.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 17.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 17.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 18.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 18.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 19.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 19.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 20.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 20.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 21.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 21.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 22.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 22.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 23.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 23.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 24.0,
+      "lane": 1,
+      "type": "block"
+    },
+    {
+      "t": 24.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 25.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 25.5,
+      "lane": 0,
+      "type": "hold",
+      "duration": 0.5
+    },
+    {
+      "t": 26.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 26.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 27.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 27.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 28.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 28.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 29.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 29.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 30.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 30.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 31.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 31.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 32.0,
+      "lane": 1,
+      "type": "block"
+    },
+    {
+      "t": 32.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 33.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 33.5,
+      "lane": 1,
+      "type": "hold",
+      "duration": 0.5
+    },
+    {
+      "t": 34.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 34.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 35.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 35.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 36.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 36.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 37.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 37.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 38.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 38.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 39.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 39.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 40.0,
+      "lane": 1,
+      "type": "block"
+    },
+    {
+      "t": 40.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 41.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 41.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 42.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 42.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 43.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 43.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 44.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 44.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 45.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 45.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 46.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 46.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 47.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 47.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 48.0,
+      "lane": 1,
+      "type": "block"
+    },
+    {
+      "t": 48.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 49.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 49.5,
+      "lane": 0,
+      "type": "hold",
+      "duration": 0.5
+    },
+    {
+      "t": 50.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 50.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 51.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 51.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 52.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 52.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 53.0,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 53.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 54.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 54.5,
+      "lane": 1,
+      "type": "jump"
+    },
+    {
+      "t": 55.0,
+      "lane": 2,
+      "type": "slide"
+    },
+    {
+      "t": 55.5,
+      "lane": 0,
+      "type": "jump"
+    },
+    {
+      "t": 56.0,
+      "lane": 1,
+      "type": "block"
+    },
+    {
+      "t": 56.5,
+      "lane": 0,
+      "type": "slide"
+    },
+    {
+      "t": 57.0,
+      "lane": 2,
+      "type": "block"
+    },
+    {
+      "t": 57.5,
+      "lane": 1,
+      "type": "hold",
+      "duration": 0.5
+    },
+    {
+      "t": 58.0,
+      "lane": 2,
+      "type": "slide"
+    }
   ]
 }
