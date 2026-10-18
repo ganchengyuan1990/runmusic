@@ -26,60 +26,32 @@ color = Color(1, 0.964706, 0.909804, 1)
 
 [node name="LaneGuide" type="Node2D" parent="World"]
 
-[node name="Lane0" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -700.0
-offset_top = -200.0
-offset_right = 980.0
-offset_bottom = -60.0
-color = Color(0.960784, 0.901961, 0.827451, 1)
-
-[node name="Lane1" type="ColorRect" parent="World/LaneGuide"]
+[node name="Track" type="ColorRect" parent="World/LaneGuide"]
 offset_left = -700.0
 offset_top = -40.0
 offset_right = 980.0
 offset_bottom = 100.0
 color = Color(0.972549, 0.921569, 0.854902, 1)
 
-[node name="Lane2" type="ColorRect" parent="World/LaneGuide"]
+[node name="BorderTop" type="ColorRect" parent="World/LaneGuide"]
 offset_left = -700.0
-offset_top = 120.0
+offset_top = -40.0
 offset_right = 980.0
-offset_bottom = 260.0
-color = Color(0.960784, 0.901961, 0.827451, 1)
-
-[node name="Div0" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -700.0
-offset_top = -200.0
-offset_right = 980.0
-offset_bottom = -198.0
+offset_bottom = -38.0
 color = Color(0.831373, 0.768627, 0.690196, 1)
 
-[node name="Div1" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -700.0
-offset_top = -60.0
-offset_right = 980.0
-offset_bottom = -58.0
-color = Color(0.831373, 0.768627, 0.690196, 1)
-
-[node name="Div2" type="ColorRect" parent="World/LaneGuide"]
+[node name="BorderBottom" type="ColorRect" parent="World/LaneGuide"]
 offset_left = -700.0
 offset_top = 100.0
 offset_right = 980.0
 offset_bottom = 102.0
 color = Color(0.831373, 0.768627, 0.690196, 1)
 
-[node name="Div3" type="ColorRect" parent="World/LaneGuide"]
-offset_left = -700.0
-offset_top = 260.0
-offset_right = 980.0
-offset_bottom = 262.0
-color = Color(0.831373, 0.768627, 0.690196, 1)
-
 [node name="JudgementLine" type="ColorRect" parent="World"]
 offset_left = -360.0
-offset_top = -210.0
+offset_top = -50.0
 offset_right = -352.0
-offset_bottom = 270.0
+offset_bottom = 110.0
 color = Color(0.356863, 0.552941, 0.937255, 1)
 
 [node name="Player" parent="World" instance=ExtResource("2_player")]

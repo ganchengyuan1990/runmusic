@@ -89,27 +89,30 @@ def build_sfx(kind: str) -> list[float]:
     return samples
 
 
+def _former_block(index: int, t: float) -> bool:
+    """Slots that used to be lane-dodge blocks, before the single-lane chart."""
+    cycle = ["jump", "slide", "block", "jump", "slide", "jump"]
+    on_bar = t >= 8.0 and abs(t - round(t)) < 1e-6 and int(round(t)) % 8 == 0
+    return on_bar or cycle[index % len(cycle)] == "block"
+
+
 def build_notes() -> list[dict]:
-    lanes = [1, 0, 2, 1, 2, 0]
-    types = ["jump", "slide", "block", "jump", "slide", "jump"]
+    # Single lane. Former block slots alternate jump / slide by the order they appear.
+    cycle = ["jump", "slide", "block", "jump", "slide", "jump"]
     notes: list[dict] = []
     t = 2.0
     index = 0
+    block_alt = 0
     while t <= 58.0 + 1e-6:
         rounded = round(t, 3)
-        # A center block every 8 seconds so camping lane 1 is dangerous,
-        # but not on every beat.
-        if rounded >= 8.0 and abs(rounded - round(rounded)) < 1e-6 and int(round(rounded)) % 8 == 0:
-            lane = 1
-            note_type = "block"
+        if _former_block(index, rounded):
+            note_type = "jump" if block_alt % 2 == 0 else "slide"
+            block_alt += 1
         else:
-            lane = lanes[index % len(lanes)]
-            note_type = types[index % len(types)]
-            if note_type == "block" and lane == 1:
-                lane = 0
+            note_type = cycle[index % len(cycle)]
             if index % 16 == 15 and note_type == "jump":
                 note_type = "hold"
-        note = {"t": rounded, "lane": lane, "type": note_type}
+        note = {"t": rounded, "type": note_type}
         if note_type == "hold":
             note["duration"] = 0.5
         notes.append(note)
@@ -117,13 +120,30 @@ def build_notes() -> list[dict]:
         t = 2.0 + index * BEAT
     # 布布落在障碍空档里，靠近前后 1.6 秒不再排障碍。
     buddy_times = [10.0, 22.0, 36.0, 50.0]
-    buddy_lanes = [0, 2, 1, 0]
     gap = 1.6
     notes = [n for n in notes if all(abs(n["t"] - b) >= gap - 1e-6 for b in buddy_times)]
-    for hit, lane in zip(buddy_times, buddy_lanes):
-        notes.append({"t": hit, "lane": lane, "type": "buddy"})
-    notes.sort(key=lambda n: (n["t"], n["lane"]))
+    for hit in buddy_times:
+        notes.append({"t": hit, "type": "buddy"})
+    notes.sort(key=lambda n: n["t"])
+    _assert_playable(notes, buddy_times, gap)
     return notes
+
+
+def _assert_playable(notes: list[dict], buddy_times: list[float], gap: float) -> None:
+    seen: set[float] = set()
+    for note in notes:
+        if note["type"] == "block":
+            raise SystemExit(f"block left at t={note['t']}")
+        if "lane" in note:
+            raise SystemExit(f"lane left at t={note['t']}")
+        if note["t"] in seen:
+            raise SystemExit(f"duplicate t={note['t']}")
+        seen.add(note["t"])
+        if note["type"] == "buddy":
+            continue
+        for hit in buddy_times:
+            if abs(note["t"] - hit) < gap - 1e-6:
+                raise SystemExit(f"buddy gap {note['t']} vs {hit}")
 
 
 def main() -> None:
@@ -132,7 +152,7 @@ def main() -> None:
         _write_wav(SFX_DIR / f"{name}.wav", build_sfx(name))
     notes = build_notes()
     chart = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "songId": "song_01",
         "title": "Beat Test",
         "artist": "Generated test tone",

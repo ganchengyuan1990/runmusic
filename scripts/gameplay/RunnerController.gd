@@ -1,27 +1,22 @@
 extends CharacterBody2D
 class_name RunnerController
-## 一二（白熊猫）。变道改 Y（上/下轨），跳是相对本轨的上弧。
+## 一二（白熊猫）。单轨侧视：Y 固定在赛道上，跳是相对该 Y 的上弧。
 ## 跑步 / 跳 / 滑切 AnimatedSprite2D 的同名动画。X 固定在判定线。
 
-signal lane_changed(lane: int)
 signal jumped
 signal slid
 
 const Layout = preload("res://scripts/gameplay/TrackLayout.gd")
-const LANE_COUNT := 3
 
-@export var lane_switch_speed: float = 12.0
 @export var jump_duration: float = 0.35
 @export var slide_duration: float = 0.4
 @export var jump_height: float = 48.0
 
-var current_lane: int = 1
 var _is_jumping: bool = false
 var _is_sliding: bool = false
 var _action_timer: float = 0.0
 var _action_duration: float = 0.0
-var _target_y: float = 0.0
-var _shown_y: float = 0.0
+var _ground_y: float = 0.0
 var _hop: float = 0.0
 var _action_fresh: bool = false
 
@@ -29,17 +24,13 @@ var _action_fresh: bool = false
 
 
 func _ready() -> void:
-	current_lane = 1
-	_target_y = Layout.LANE_Y[current_lane]
-	_shown_y = _target_y
+	_ground_y = Layout.LANE_Y
 	position.x = Layout.RUNNER_X
-	position.y = _shown_y
+	position.y = _ground_y
 	_play_pose("idle")
 
 
 func _physics_process(delta: float) -> void:
-	var blend := clampf(lane_switch_speed * delta, 0.0, 1.0)
-	_shown_y = lerpf(_shown_y, _target_y, blend)
 	# 无头探针里单帧 delta 可能超过整段跳跃。刚按下的那一帧最多只消耗
 	# 四分之一时长，保证跳/滑的姿势至少能画出来。
 	var step := delta
@@ -53,7 +44,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		_hop = 0.0
 	position.x = Layout.RUNNER_X
-	position.y = _shown_y + _hop
+	position.y = _ground_y + _hop
 	_update_pose()
 
 
@@ -95,15 +86,6 @@ func _finish_action() -> void:
 	_is_sliding = false
 	_action_timer = 0.0
 	_hop = 0.0
-
-
-func move_lane(delta_lane: int) -> void:
-	var next := clampi(current_lane + delta_lane, 0, LANE_COUNT - 1)
-	if next == current_lane:
-		return
-	current_lane = next
-	_target_y = Layout.LANE_Y[current_lane]
-	lane_changed.emit(current_lane)
 
 
 func try_jump() -> void:
