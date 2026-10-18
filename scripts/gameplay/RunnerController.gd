@@ -234,7 +234,8 @@ func _update_pose() -> void:
 		_play_pose("slide")
 	elif not is_on_floor():
 		_play_pose("jump")
-	elif absf(velocity.x) > 10.0 and GameClock.is_playing and not GameClock.is_soft_frozen():
+	elif absf(velocity.x) > 10.0:
+		# 脚在地上并且在往左右走就迈腿。不看歌曲时钟，停住才是待机。
 		_play_pose("run")
 	else:
 		_play_pose("idle")

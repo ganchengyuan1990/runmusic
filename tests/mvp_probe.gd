@@ -71,6 +71,26 @@ func _logic() -> bool:
 		await get_tree().physics_frame
 	if not player.is_grounded():
 		return _fail("not grounded at %s vel %s" % [player.position, player.velocity])
+	if not _jump_tail_connected():
+		return _fail("jump tail is disconnected from the body")
+
+	var sprite := player.get_node("Visual/Sprite") as AnimatedSprite2D
+	GameClock.is_playing = false
+	var seen := {}
+	for _i in 48:
+		player.force_input(1.0, false, false, false, false)
+		await get_tree().physics_frame
+		if not player.is_grounded():
+			return _fail("run cycle left the ground at %s" % player.position)
+		if sprite.animation != "run":
+			return _fail("ground move anim %s frame %s" % [sprite.animation, sprite.frame])
+		seen[sprite.frame] = true
+	if not seen.has(0) or not seen.has(1):
+		return _fail("run cycle missing frames %s" % seen)
+	player.respawn_at(Vector2(TrackLayout.START_X, TrackLayout.stand_y()))
+	for _i in 6:
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
 
 	var full := await _jump_rise(player, true)
 	player.respawn_at(Vector2(player.position.x, TrackLayout.stand_y()))
@@ -215,10 +235,10 @@ func _shots() -> bool:
 	if not await _grab(SHOT_DIR + "/park_start.png"):
 		return false
 
-	for _i in 80:
-		player.force_input(1.0, false, false, false, false)
-		await get_tree().physics_frame
-	if not await _grab(SHOT_DIR + "/park_run.png"):
+	var sprite := player.get_node("Visual/Sprite") as AnimatedSprite2D
+	if not await _grab_run_frame(player, sprite, 0, SHOT_DIR + "/park_run.png"):
+		return false
+	if not await _grab_run_frame(player, sprite, 1, SHOT_DIR + "/park_run_b.png"):
 		return false
 
 	var bush_x := TrackLayout.x_at_time(4.0)
@@ -260,6 +280,64 @@ func _shots() -> bool:
 	GameClock.stop()
 	print("shots ok")
 	return true
+
+
+func _grab_run_frame(player: RunnerController, sprite: AnimatedSprite2D, frame: int, path: String) -> bool:
+	var seen := false
+	for _i in 40:
+		player.force_input(1.0, false, false, false, false)
+		await get_tree().physics_frame
+		if sprite.animation == "run" and sprite.frame == frame:
+			seen = true
+			break
+	if not seen:
+		return _fail("run frame %s not reached (anim %s frame %s)" % [frame, sprite.animation, sprite.frame])
+	sprite.speed_scale = 0.0
+	sprite.frame = frame
+	var ok := await _grab(path)
+	sprite.speed_scale = 1.0
+	return ok
+
+
+## 跳图的尾巴尖必须和身体连在同一块不透明像素上。
+func _jump_tail_connected() -> bool:
+	var tex := load("res://assets/characters/yier_jump.png") as Texture2D
+	if tex == null:
+		return false
+	var img := tex.get_image()
+	if img == null:
+		return false
+	var w := img.get_width()
+	var h := img.get_height()
+	var seen := {}
+	var stack: Array[Vector2i] = []
+	var seeded := false
+	for y in h:
+		for x in w:
+			if img.get_pixel(x, y).a > 0.15:
+				stack.append(Vector2i(x, y))
+				seeded = true
+				break
+		if seeded:
+			break
+	var reached_tip := false
+	while not stack.is_empty():
+		var p: Vector2i = stack.pop_back()
+		if p.x < 0 or p.y < 0 or p.x >= w or p.y >= h:
+			continue
+		var key := p.y * w + p.x
+		if seen.has(key):
+			continue
+		if img.get_pixel(p.x, p.y).a <= 0.15:
+			continue
+		seen[key] = true
+		if p.y >= 110 and p.x >= 95:
+			reached_tip = true
+		stack.append(Vector2i(p.x + 1, p.y))
+		stack.append(Vector2i(p.x - 1, p.y))
+		stack.append(Vector2i(p.x, p.y + 1))
+		stack.append(Vector2i(p.x, p.y - 1))
+	return reached_tip
 
 
 func _grab(path: String) -> bool:
