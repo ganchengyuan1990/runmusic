@@ -62,8 +62,6 @@ func flash_judge(text: String) -> void:
 			judge_label.text = "Good"
 		"miss":
 			judge_label.text = "Miss"
-		"dodge":
-			judge_label.text = "躲开"
 		"brush":
 			judge_label.text = "擦肩"
 		"kiss":

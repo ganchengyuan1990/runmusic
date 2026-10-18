@@ -26,10 +26,9 @@ func show_results(data: Dictionary) -> void:
 	if _combo_label:
 		_combo_label.text = "分数：%d    最大连击：%d" % [int(data.get("score", 0)), int(data.get("max_combo", 0))]
 	if _stats_label:
-		_stats_label.text = "Perfect %d  |  Good %d  |  Miss %d  |  躲开 %d  |  生命 %d" % [
+		_stats_label.text = "Perfect %d  |  Good %d  |  Miss %d  |  生命 %d" % [
 			int(data.get("perfect", 0)),
 			int(data.get("good", 0)),
 			int(data.get("miss", 0)),
-			int(data.get("dodge", 0)),
 			int(data.get("lives", 0)),
 		]

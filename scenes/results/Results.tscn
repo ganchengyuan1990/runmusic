@@ -56,7 +56,7 @@ horizontal_alignment = 1
 
 [node name="StatsLabel" type="Label" parent="ResultsUI/VBox"]
 layout_mode = 2
-text = "Perfect 0  |  Good 0  |  Miss 0  |  躲开 0  |  生命 0"
+text = "Perfect 0  |  Good 0  |  Miss 0  |  生命 0"
 horizontal_alignment = 1
 autowrap_mode = 3
 
