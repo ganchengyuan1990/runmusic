@@ -71,8 +71,8 @@ func _logic() -> bool:
 		await get_tree().physics_frame
 	if not player.is_grounded():
 		return _fail("not grounded at %s vel %s" % [player.position, player.velocity])
-	if not _jump_tail_connected():
-		return _fail("jump tail is disconnected from the body")
+	if not _jump_sprite_clean():
+		return _fail("jump sprite has a stray fragment or bottom-right blob")
 
 	var sprite := player.get_node("Visual/Sprite") as AnimatedSprite2D
 	GameClock.is_playing = false
@@ -358,8 +358,8 @@ func _grab_run_frame(player: RunnerController, sprite: AnimatedSprite2D, frame: 
 	return ok
 
 
-## 跳图的尾巴尖必须和身体连在同一块不透明像素上。
-func _jump_tail_connected() -> bool:
+## 跳图只保留身体、腿和左侧蓬松尾巴。右下角的碎片和灰块都应该是透明的。
+func _jump_sprite_clean() -> bool:
 	var tex := load("res://assets/characters/yier_jump.png") as Texture2D
 	if tex == null:
 		return false
@@ -368,35 +368,48 @@ func _jump_tail_connected() -> bool:
 		return false
 	var w := img.get_width()
 	var h := img.get_height()
+	# 脚大约收在 y=96。再往下的右下角不能有成块的不透明像素。
+	var corner := 0
+	for y in range(98, h):
+		for x in range(72, w):
+			if img.get_pixel(x, y).a > 0.08:
+				corner += 1
+	if corner > 0:
+		return false
 	var seen := {}
-	var stack: Array[Vector2i] = []
-	var seeded := false
 	for y in h:
 		for x in w:
-			if img.get_pixel(x, y).a > 0.15:
-				stack.append(Vector2i(x, y))
-				seeded = true
-				break
-		if seeded:
-			break
-	var reached_tip := false
-	while not stack.is_empty():
-		var p: Vector2i = stack.pop_back()
-		if p.x < 0 or p.y < 0 or p.x >= w or p.y >= h:
-			continue
-		var key := p.y * w + p.x
-		if seen.has(key):
-			continue
-		if img.get_pixel(p.x, p.y).a <= 0.15:
-			continue
-		seen[key] = true
-		if p.y >= 110 and p.x >= 95:
-			reached_tip = true
-		stack.append(Vector2i(p.x + 1, p.y))
-		stack.append(Vector2i(p.x - 1, p.y))
-		stack.append(Vector2i(p.x, p.y + 1))
-		stack.append(Vector2i(p.x, p.y - 1))
-	return reached_tip
+			if seen.has(y * w + x):
+				continue
+			if img.get_pixel(x, y).a <= 0.12:
+				continue
+			var stack: Array[Vector2i] = [Vector2i(x, y)]
+			var count := 0
+			var min_y := y
+			var min_x := x
+			while not stack.is_empty():
+				var p: Vector2i = stack.pop_back()
+				if p.x < 0 or p.y < 0 or p.x >= w or p.y >= h:
+					continue
+				var key := p.y * w + p.x
+				if seen.has(key):
+					continue
+				if img.get_pixel(p.x, p.y).a <= 0.12:
+					continue
+				seen[key] = true
+				count += 1
+				min_y = mini(min_y, p.y)
+				min_x = mini(min_x, p.x)
+				stack.append(Vector2i(p.x + 1, p.y))
+				stack.append(Vector2i(p.x - 1, p.y))
+				stack.append(Vector2i(p.x, p.y + 1))
+				stack.append(Vector2i(p.x, p.y - 1))
+			# 脸上的眼睛是分开的小块，都在 y<70。脚以下的孤岛才是碎片。
+			if count >= 16 and min_y >= 70:
+				return false
+			if count >= 24 and min_x >= 80 and min_y >= 90:
+				return false
+	return true
 
 
 func _grab(path: String) -> bool:
