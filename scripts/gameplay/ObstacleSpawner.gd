@@ -44,7 +44,7 @@ func _spawn_due(song_t: float) -> void:
 		var t := float(n.get("t", 0.0))
 		if t > song_t + approach:
 			break
-		# 布布由 BuddyCatch 接，不进障碍池，避免和挡块叠在同一拍。
+		# 布布由 BuddyCatch 接，不进障碍池。
 		if str(n.get("type", "")) == "buddy":
 			_note_cursor += 1
 			continue

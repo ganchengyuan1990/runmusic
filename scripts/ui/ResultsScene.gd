@@ -27,7 +27,6 @@ func _ready() -> void:
 			"perfect": 0,
 			"good": 0,
 			"miss": 0,
-			"dodge": 0,
 			"lives": 0,
 			"kisses": 0,
 		}

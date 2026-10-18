@@ -1,6 +1,6 @@
 extends Node
 ## 布布：Approach → CatchWindow → Kiss → Resume。
-## 和一二同车道、落在放宽的窗里就接住。亲亲时歌曲时钟停住，点一下可以跳过。
+## 时间落在放宽的窗里就接住，不看车道。亲亲时歌曲时钟停住，点一下可以跳过。
 
 signal caught
 signal brushed
@@ -25,7 +25,7 @@ var _resolved: Dictionary = {}
 var _kissing: bool = false
 var _kiss_left: float = 0.0
 var _window_ms: float = DEFAULT_WINDOW_MS
-var _kiss_lane_y: float = 0.0
+var _kiss_y: float = 0.0
 
 
 func _ready() -> void:
@@ -104,19 +104,17 @@ func _tick_approach() -> void:
 	if song_t < hit - approach:
 		_buddy.visible = false
 		return
-	var lane := clampi(int(note.get("lane", 1)), 0, 2)
 	var u := 1.0
 	if approach > 0.0:
 		u = clampf((song_t - (hit - approach)) / approach, 0.0, 1.6)
 	_buddy.visible = true
 	_buddy.scale = Vector2.ONE
 	_set_buddy_texture(BUDDY_APPROACH)
-	_buddy.position = Vector2(lerpf(Layout.SPAWN_X, Layout.HIT_X, u), Layout.LANE_Y[lane])
+	_buddy.position = Vector2(lerpf(Layout.SPAWN_X, Layout.HIT_X, u), Layout.LANE_Y)
 	var window := _window_ms / 1000.0
 	if song_t >= hit - window and song_t <= hit + window:
-		if _runner and _runner.current_lane == lane:
-			_begin_kiss(lane)
-			return
+		_begin_kiss()
+		return
 	if song_t > hit + window:
 		_resolved[_cursor] = true
 		_cursor += 1
@@ -125,11 +123,11 @@ func _tick_approach() -> void:
 			_hud.flash_judge("brush")
 
 
-func _begin_kiss(lane: int) -> void:
+func _begin_kiss() -> void:
 	_resolved[_cursor] = true
 	_kissing = true
 	_kiss_left = KISS_SEC
-	_kiss_lane_y = Layout.LANE_Y[lane]
+	_kiss_y = Layout.LANE_Y
 	GameClock.soft_freeze()
 	caught.emit()
 	if _hud:
@@ -141,7 +139,7 @@ func _present_kiss() -> void:
 	if _buddy:
 		_buddy.visible = true
 		_set_buddy_texture(BUDDY_IDLE)
-		_buddy.position = Vector2(Layout.RUNNER_X + SIDE_BY_SIDE, _kiss_lane_y)
+		_buddy.position = Vector2(Layout.RUNNER_X + SIDE_BY_SIDE, _kiss_y)
 		_buddy.scale = Vector2(KISS_SCALE, KISS_SCALE)
 	_set_runner_scale(KISS_SCALE)
 

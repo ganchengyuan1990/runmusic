@@ -3,10 +3,9 @@ class_name InputRouter
 ## 键盘 / 触屏 → 统一 Action（带 stamped 时间）。
 ## Judge 应用「按下瞬间的 song_time」，避免抬起才判定。
 ##
-## 触屏（横版侧视）：
-## - 左半上：上一条赛道；左半下：下一条赛道
-## - 右半上：跳；右半下：滑铲
-## - 滑动：上滑跳，下滑滑铲，左滑上轨，右滑下轨
+## 触屏（单轨侧视）：
+## - 上半：跳；下半：滑铲
+## - 滑动：上滑跳，下滑滑铲。左右滑不做事。
 ## 桌面鼠标左键单击走同一套分区，便于没有触摸屏时试手感。
 
 signal action_pressed(action: String, song_time: float)
@@ -46,11 +45,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion):
 		return
 	var stamped := GameClock.song_time_sec
-	if event.is_action_pressed("lane_left"):
-		_route_lane(-1, stamped)
-	elif event.is_action_pressed("lane_right"):
-		_route_lane(1, stamped)
-	elif event.is_action_pressed("jump"):
+	if event.is_action_pressed("jump"):
 		_route_jump(stamped)
 	elif event.is_action_pressed("slide"):
 		_route_slide(stamped)
@@ -59,7 +54,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		# TODO: 暂停菜单
 
 
-## ScreenTouch / ScreenDrag / 鼠标左键。点按分区；拖过阈值算一次滑动。
+## ScreenTouch / ScreenDrag / 鼠标左键。点按上下分区；纵向拖过阈值算一次滑动。
 func handle_touch(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		var touch := event as InputEventScreenTouch
@@ -106,16 +101,13 @@ func _consider_swipe(pos: Vector2) -> void:
 	if delta.length() < swipe_threshold_px:
 		return
 	_swipe_fired = true
+	if absf(delta.y) < absf(delta.x):
+		return
 	var stamped := GameClock.song_time_sec
-	if absf(delta.y) >= absf(delta.x):
-		if delta.y < 0.0:
-			_route_jump(stamped)
-		else:
-			_route_slide(stamped)
-	elif delta.x < 0.0:
-		_route_lane(-1, stamped)
+	if delta.y < 0.0:
+		_route_jump(stamped)
 	else:
-		_route_lane(1, stamped)
+		_route_slide(stamped)
 
 
 func _route_tap(pos: Vector2) -> void:
@@ -123,39 +115,26 @@ func _route_tap(pos: Vector2) -> void:
 	if size.x <= 1.0 or size.y <= 1.0:
 		size = Vector2(1280, 720)
 	var stamped := GameClock.song_time_sec
-	var on_left := pos.x < size.x * 0.5
-	var on_upper := pos.y < size.y * 0.5
-	if on_left and on_upper:
-		_route_lane(-1, stamped)
-	elif on_left:
-		_route_lane(1, stamped)
-	elif on_upper:
+	if pos.y < size.y * 0.5:
 		_route_jump(stamped)
 	else:
 		_route_slide(stamped)
-
-
-func _route_lane(delta_lane: int, stamped: float) -> void:
-	var action := "lane_left" if delta_lane < 0 else "lane_right"
-	_emit_and_route(action, stamped)
-	if _runner:
-		_runner.move_lane(delta_lane)
 
 
 func _route_jump(stamped: float) -> void:
 	_emit_and_route("jump", stamped)
 	if _runner:
 		_runner.try_jump()
-	if _judge and _runner:
-		_judge.try_judge("jump", _runner.current_lane, stamped)
+	if _judge:
+		_judge.try_judge("jump", stamped)
 
 
 func _route_slide(stamped: float) -> void:
 	_emit_and_route("slide", stamped)
 	if _runner:
 		_runner.try_slide()
-	if _judge and _runner:
-		_judge.try_judge("slide", _runner.current_lane, stamped)
+	if _judge:
+		_judge.try_judge("slide", stamped)
 
 
 func _emit_and_route(action: String, song_time: float) -> void:

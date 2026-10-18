@@ -11,7 +11,6 @@ const WavLib = preload("res://scripts/audio/WavStream.gd")
 
 @onready var music: AudioStreamPlayer = $MusicPlayer
 @onready var sfx: AudioStreamPlayer = $SfxPlayer
-@onready var runner: RunnerController = $World/Player
 @onready var spawner: ObstacleSpawner = $World/ObstacleSpawner
 @onready var pool: ObstaclePool = $World/ObstaclePool
 @onready var judge: Judge = $Judge
@@ -66,8 +65,7 @@ func _process(_delta: float) -> void:
 	if _ended or not GameClock.is_playing:
 		return
 	if judge:
-		var lane := runner.current_lane if runner else 1
-		judge.process_auto_misses(GameClock.song_time_sec, lane)
+		judge.process_auto_misses(GameClock.song_time_sec)
 	if _lives <= 0 or _chart_finished():
 		_end_run()
 
@@ -117,14 +115,6 @@ func _on_judged(result: String, note: Dictionary, _delta_ms: float) -> void:
 	if hud:
 		hud.flash_judge(result)
 	_play_sfx(result)
-	if result == "kiss":
-		return
-	if result == "miss" and str(note.get("type", "")) == "block":
-		_lives = maxi(_lives - 1, 0)
-		if hud:
-			hud.set_lives(_lives)
-		if _lives <= 0:
-			_end_run()
 
 
 func _on_kiss() -> void:

@@ -3,8 +3,8 @@ class_name ArtPalette
 ## 方向 C · 手绘 Q 版熊猫。色值对齐 Figma 板 06 / 07。
 
 const PAPER := Color("#FFF6E8")
-const LANE := Color("#F5E6D3")
-const LANE_MID := Color("#F8EBDA")
+## 单条赛道，用原先中轨的纸色。LANE_LINE 是上下边。
+const LANE := Color("#F8EBDA")
 const LANE_LINE := Color("#D4C4B0")
 const INK := Color("#2B2B2B")
 const OUTLINE := Color("#3B3B3B")

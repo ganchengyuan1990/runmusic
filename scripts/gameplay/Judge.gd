@@ -2,10 +2,10 @@ extends Node
 class_name Judge
 ## 输入时找最近未判定 note；|song_time - note.t| 落在窗内则命中。
 ## 起步窗：Perfect ±50ms，Good ±100ms（可被谱面 windowsMs 覆盖）。
-## 超时的 jump/slide/hold 自动 Miss；block 在 t 时刻与玩家同车道则 Miss，否则算躲开。
+## 超时的 jump/slide/hold 自动 Miss。布布由 BuddyCatch 单独计时，这里跳过。
 
 signal judged(result: String, note: Dictionary, delta_ms: float)
-# result: "perfect" | "good" | "miss" | "dodge"
+# result: "perfect" | "good" | "miss"
 
 enum Grade { PERFECT, GOOD, MISS }
 
@@ -38,8 +38,8 @@ func unresolved_count() -> int:
 	return pending
 
 
-## action: "jump" | "slide"；lane 为当前车道。空挥不发 judged，留给超时自动 Miss。
-func try_judge(action: String, lane: int, song_time: float) -> Grade:
+## action: "jump" | "slide"。空挥不发 judged，留给超时自动 Miss。
+func try_judge(action: String, song_time: float) -> Grade:
 	var best_i := -1
 	var best_abs := INF
 	var notes := ChartLoader.notes
@@ -47,10 +47,8 @@ func try_judge(action: String, lane: int, song_time: float) -> Grade:
 		if _judged_indices.has(i):
 			continue
 		var n: Dictionary = notes[i]
-		if int(n.get("lane", -1)) != lane:
-			continue
 		var ntype := str(n.get("type", ""))
-		if ntype == "block" or ntype == "buddy":
+		if ntype == "buddy":
 			continue
 		if action == "jump" and ntype not in ["jump", "hold"]:
 			continue
@@ -76,8 +74,8 @@ func try_judge(action: String, lane: int, song_time: float) -> Grade:
 	return grade
 
 
-## 每帧调用。jump/slide/hold 过 Good 窗自动 Miss；block 在 note.t 与玩家车道重叠则 Miss。
-func process_auto_misses(song_time: float, runner_lane: int) -> void:
+## 每帧调用。jump/slide/hold 过 Good 窗自动 Miss。
+func process_auto_misses(song_time: float) -> void:
 	var miss_after := good_ms / 1000.0
 	var notes := ChartLoader.notes
 	for i in notes.size():
@@ -89,14 +87,6 @@ func process_auto_misses(song_time: float, runner_lane: int) -> void:
 			continue
 		var ntype := str(n.get("type", ""))
 		if ntype == "buddy":
-			continue
-		if ntype == "block":
-			_judged_indices[i] = true
-			var delta_ms := (song_time - t) * 1000.0
-			if int(n.get("lane", -1)) == runner_lane:
-				judged.emit("miss", n, delta_ms)
-			else:
-				judged.emit("dodge", n, delta_ms)
 			continue
 		if song_time < t + miss_after:
 			continue
