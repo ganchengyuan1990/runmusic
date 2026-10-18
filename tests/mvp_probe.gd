@@ -71,8 +71,8 @@ func _logic() -> bool:
 		await get_tree().physics_frame
 	if not player.is_grounded():
 		return _fail("not grounded at %s vel %s" % [player.position, player.velocity])
-	if not _jump_tail_connected():
-		return _fail("jump tail is disconnected from the body")
+	if not _jump_sprite_clean():
+		return _fail("jump sprite has a stray fragment or bottom-right blob")
 
 	var sprite := player.get_node("Visual/Sprite") as AnimatedSprite2D
 	GameClock.is_playing = false
@@ -299,8 +299,8 @@ func _grab_run_frame(player: RunnerController, sprite: AnimatedSprite2D, frame: 
 	return ok
 
 
-## 跳图的尾巴必须是一整条：尖端和身体相连，中段绒毛也不能被横向切掉。
-func _jump_tail_connected() -> bool:
+## 跳图只保留身体、腿和左侧蓬松尾巴。右下角的碎片和灰块都应该是透明的。
+func _jump_sprite_clean() -> bool:
 	var tex := load("res://assets/characters/yier_jump.png") as Texture2D
 	if tex == null:
 		return false
@@ -309,58 +309,47 @@ func _jump_tail_connected() -> bool:
 		return false
 	var w := img.get_width()
 	var h := img.get_height()
+	# 脚大约收在 y=96。再往下的右下角不能有成块的不透明像素。
+	var corner := 0
+	for y in range(98, h):
+		for x in range(72, w):
+			if img.get_pixel(x, y).a > 0.08:
+				corner += 1
+	if corner > 0:
+		return false
 	var seen := {}
-	var stack: Array[Vector2i] = []
-	var seeded := false
 	for y in h:
 		for x in w:
-			if img.get_pixel(x, y).a > 0.15:
-				stack.append(Vector2i(x, y))
-				seeded = true
-				break
-		if seeded:
-			break
-	var reached_tip := false
-	while not stack.is_empty():
-		var p: Vector2i = stack.pop_back()
-		if p.x < 0 or p.y < 0 or p.x >= w or p.y >= h:
-			continue
-		var key := p.y * w + p.x
-		if seen.has(key):
-			continue
-		if img.get_pixel(p.x, p.y).a <= 0.15:
-			continue
-		seen[key] = true
-		if p.y >= 110 and p.x >= 95:
-			reached_tip = true
-		stack.append(Vector2i(p.x + 1, p.y))
-		stack.append(Vector2i(p.x - 1, p.y))
-		stack.append(Vector2i(p.x, p.y + 1))
-		stack.append(Vector2i(p.x, p.y - 1))
-	# 只连通还不够：上一版用细桥把断掉的尖端连上，切面还在。
-	# 健康中段的浅色绒毛左右缘要连续，不能突然缺掉左边一块。
-	return reached_tip and _jump_tail_shaft_smooth(img)
-
-
-func _jump_tail_shaft_smooth(img: Image) -> bool:
-	var prev_l := -1
-	var prev_r := -1
-	for y in range(84, 104):
-		var left := -1
-		var right := -1
-		var limit := img.get_width()
-		for x in range(60, limit):
-			var c := img.get_pixel(x, y)
-			if c.a > 0.7 and c.r + c.g + c.b > 1.7:
-				if left < 0:
-					left = x
-				right = x
-		if left < 0 or right - left < 22:
-			return false
-		if prev_l >= 0 and (absi(left - prev_l) > 6 or absi(right - prev_r) > 6):
-			return false
-		prev_l = left
-		prev_r = right
+			if seen.has(y * w + x):
+				continue
+			if img.get_pixel(x, y).a <= 0.12:
+				continue
+			var stack: Array[Vector2i] = [Vector2i(x, y)]
+			var count := 0
+			var min_y := y
+			var min_x := x
+			while not stack.is_empty():
+				var p: Vector2i = stack.pop_back()
+				if p.x < 0 or p.y < 0 or p.x >= w or p.y >= h:
+					continue
+				var key := p.y * w + p.x
+				if seen.has(key):
+					continue
+				if img.get_pixel(p.x, p.y).a <= 0.12:
+					continue
+				seen[key] = true
+				count += 1
+				min_y = mini(min_y, p.y)
+				min_x = mini(min_x, p.x)
+				stack.append(Vector2i(p.x + 1, p.y))
+				stack.append(Vector2i(p.x - 1, p.y))
+				stack.append(Vector2i(p.x, p.y + 1))
+				stack.append(Vector2i(p.x, p.y - 1))
+			# 脸上的眼睛是分开的小块，都在 y<70。脚以下的孤岛才是碎片。
+			if count >= 16 and min_y >= 70:
+				return false
+			if count >= 24 and min_x >= 80 and min_y >= 90:
+				return false
 	return true
 
 
