@@ -87,6 +87,8 @@ func _logic() -> bool:
 		seen[sprite.frame] = true
 	if not seen.has(0) or not seen.has(1):
 		return _fail("run cycle missing frames %s" % seen)
+	if not await _run_cadence(player, sprite):
+		return false
 	player.respawn_at(Vector2(TrackLayout.START_X, TrackLayout.stand_y()))
 	for _i in 6:
 		player.force_input(0.0, false, false, false, false)
@@ -110,6 +112,10 @@ func _logic() -> bool:
 	await get_tree().physics_frame
 	if not player.is_sliding_now() or player.collision_height() > 36.0:
 		return _fail("slide height %s sliding %s" % [player.collision_height(), player.is_sliding_now()])
+	if sprite.animation != "slide" or absf(sprite.rotation) > 0.01 or absf(sprite.position.y - 14.0) > 0.6:
+		return _fail("slide pose anim %s rot %s y %s" % [sprite.animation, sprite.rotation, sprite.position.y])
+	if sprite.scale.distance_to(Vector2.ONE) > 0.02:
+		return _fail("slide scale %s" % sprite.scale)
 
 	var pit_hits := {"n": 0}
 	player.pit_fallen.connect(func(): pit_hits["n"] += 1)
@@ -370,6 +376,9 @@ func _song_autorun(host: Node) -> bool:
 		return _autorun_fail(game, "title start is not clock locked")
 	if str(ChartLoader.chart.get("songId", "")) != "song_01":
 		return _autorun_fail(game, "title start song %s" % ChartLoader.chart.get("songId", ""))
+	for sfx_name in ["perfect", "good", "miss", "kiss", "jump", "slide"]:
+		if not game.has_sfx(sfx_name):
+			return _autorun_fail(game, "missing sfx %s" % sfx_name)
 	var worst := 0.0
 	for i in 21:
 		var t := float(i) * 0.2
@@ -693,6 +702,14 @@ func _shots() -> bool:
 		return false
 	if not await _grab_run_frame(player, sprite, 1, SHOT_DIR + "/park_run_b.png"):
 		return false
+	if not await _grab_run_phase(player, sprite, 0.0, SHOT_DIR + "/park_run_plant.png"):
+		return false
+	if not await _grab_run_phase(player, sprite, 0.25, SHOT_DIR + "/park_run_float.png"):
+		return false
+	if not await _grab_run_phase(player, sprite, 0.5, SHOT_DIR + "/park_run_plant_b.png"):
+		return false
+	if not await _grab_run_phase(player, sprite, 0.75, SHOT_DIR + "/park_run_float_b.png"):
+		return false
 
 	var bush_err := await _advance_to(player, TrackLayout.x_at_time(4.0), 90.0)
 	if bush_err != "":
@@ -757,6 +774,153 @@ func _advance_to(player: RunnerController, target_x: float, slack: float) -> Str
 		player.force_input(-1.0, false, false, false, true)
 		await get_tree().physics_frame
 	return "auto-run did not reach x %.0f (at %.0f)" % [target_x, player.position.x]
+
+
+## 自由跑时整步大约 0.5 秒（120 BPM 一拍）。身体要有明显起伏，跳起来时压扁和前倾要收回。
+func _run_cadence(player: RunnerController, sprite: AnimatedSprite2D) -> bool:
+	var changes := 0
+	var last := sprite.frame
+	var min_y := sprite.position.y
+	var max_y := sprite.position.y
+	for _i in 72:
+		player.force_input(1.0, false, false, false, false)
+		await get_tree().physics_frame
+		if not player.is_grounded() or sprite.animation != "run":
+			return _fail("cadence left run at %s anim %s" % [player.position, sprite.animation])
+		min_y = minf(min_y, sprite.position.y)
+		max_y = maxf(max_y, sprite.position.y)
+		if sprite.frame != last:
+			changes += 1
+			last = sprite.frame
+	var bob := max_y - min_y
+	print("run cadence changes=%s bob=%.1f" % [changes, bob])
+	if changes < 3 or changes > 7:
+		return _fail("run cadence changes %s (want about 4 per second)" % changes)
+	if bob < 5.0:
+		return _fail("run bob only %.1f px" % bob)
+
+	player.set_clock_locked(true)
+	GameClock.is_playing = true
+	GameClock.song_time_sec = 0.0
+	for _i in 6:
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+	if not player.is_grounded() or sprite.animation != "run":
+		return _fail("clock run not grounded anim %s" % sprite.animation)
+	var phase_plant := player.run_cycle_phase()
+	var y_plant := sprite.position.y
+	GameClock.song_time_sec = 0.125
+	player.force_input(0.0, false, false, false, false)
+	await get_tree().physics_frame
+	var phase_float := player.run_cycle_phase()
+	var y_float := sprite.position.y
+	print("run clock phase %.3f -> %.3f y %.1f -> %.1f" % [phase_plant, phase_float, y_plant, y_float])
+	if absf(phase_plant) > 0.04 or absf(phase_float - 0.25) > 0.04:
+		return _fail("clock phase plant %.3f float %.3f" % [phase_plant, phase_float])
+	if y_float > y_plant - 4.0:
+		return _fail("clock bob plant %.1f float %.1f" % [y_plant, y_float])
+	player.force_input(0.0, true, true, false, false)
+	await get_tree().physics_frame
+	if sprite.animation != "jump" or absf(sprite.rotation) > 0.02 or absf(sprite.position.y + 6.0) > 0.6:
+		return _fail("jump pose anim %s rot %s y %s" % [sprite.animation, sprite.rotation, sprite.position.y])
+	if sprite.scale.distance_to(Vector2.ONE) > 0.02:
+		return _fail("jump scale %s" % sprite.scale)
+	player.set_clock_locked(false)
+	GameClock.is_playing = false
+	if not _sfx_tones():
+		return false
+	return true
+
+
+func _sfx_tones() -> bool:
+	var WavLib = load("res://scripts/audio/WavStream.gd")
+	var specs := {
+		"perfect": {"hz": 1318.5, "sec": 0.12},
+		"good": {"hz": 880.0, "sec": 0.10},
+		"miss": {"hz": 329.6, "sec": 0.13},
+		"kiss": {"hz": 880.0, "sec": 0.20},
+		"jump": {"hz": 880.0, "sec": 0.09},
+		"slide": {"hz": 550.0, "sec": 0.09},
+	}
+	for name in specs:
+		var stream := WavLib.load_file("res://assets/audio/sfx/%s.wav" % name) as AudioStreamWAV
+		if stream == null or stream.stereo or stream.data.is_empty():
+			return _fail("sfx %s missing" % name)
+		var length := stream.get_length()
+		var expect: float = specs[name]["sec"]
+		if length < 0.05 or length > 0.24 or absf(length - expect) > 0.03:
+			return _fail("sfx %s length %.3f" % [name, length])
+		var rate := int(stream.mix_rate)
+		var data := stream.data
+		var count := data.size() / 2
+		var peak := _pcm_peak(data, 0, count)
+		var attack := _pcm_peak(data, 0, mini(count, int(0.002 * float(rate))))
+		if peak < 1800 or peak > 14000:
+			return _fail("sfx %s peak %s" % [name, peak])
+		if attack > int(float(peak) * 0.35):
+			return _fail("sfx %s attack %s peak %s" % [name, attack, peak])
+		var hz: float = specs[name]["hz"]
+		var tone := _goertzel(data, rate, 0.012, 0.05, hz)
+		var mud := _goertzel(data, rate, 0.012, 0.05, 110.0)
+		if tone < mud * 2.0:
+			return _fail("sfx %s pitch %.0f lost to low end" % [name, hz])
+	var miss := WavLib.load_file("res://assets/audio/sfx/miss.wav") as AudioStreamWAV
+	var miss_note := _goertzel(miss.data, int(miss.mix_rate), 0.012, 0.06, 329.6)
+	var miss_thud := _goertzel(miss.data, int(miss.mix_rate), 0.012, 0.06, 95.0)
+	if miss_note < miss_thud * 3.0:
+		return _fail("miss still sounds like a thud")
+	print("sfx tones ok")
+	return true
+
+
+func _pcm_sample(data: PackedByteArray, index: int) -> int:
+	var lo := int(data[index * 2])
+	var hi := int(data[index * 2 + 1])
+	var sample := lo | (hi << 8)
+	if sample >= 32768:
+		sample -= 65536
+	return sample
+
+
+func _pcm_peak(data: PackedByteArray, i0: int, i1: int) -> int:
+	var peak := 0
+	for i in range(i0, i1):
+		peak = maxi(peak, absi(_pcm_sample(data, i)))
+	return peak
+
+
+func _goertzel(data: PackedByteArray, rate: int, t0: float, t1: float, freq: float) -> float:
+	var count := data.size() / 2
+	var i0 := clampi(int(t0 * float(rate)), 0, count)
+	var i1 := clampi(int(t1 * float(rate)), i0, count)
+	if i1 <= i0:
+		return 0.0
+	var coeff := 2.0 * cos(TAU * freq / float(rate))
+	var s1 := 0.0
+	var s2 := 0.0
+	for i in range(i0, i1):
+		var s0 := float(_pcm_sample(data, i)) + coeff * s1 - s2
+		s2 = s1
+		s1 = s0
+	return s1 * s1 + s2 * s2 - coeff * s1 * s2
+
+
+func _grab_run_phase(player: RunnerController, sprite: AnimatedSprite2D, phase: float, path: String) -> bool:
+	var bpm := float(ChartLoader.chart.get("bpm", 120.0))
+	var song_t := phase / (bpm / 60.0)
+	# 截图时歌曲进程是关的，但保险起见每一步都把时钟钉在这一拍上，避免播放位置把相位冲掉。
+	GameClock.set_process(false)
+	var ready := false
+	for _i in 8:
+		GameClock.song_time_sec = song_t
+		player.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+		if player.is_grounded() and sprite.animation == "run" and absf(player.run_cycle_phase() - phase) <= 0.04:
+			ready = true
+			break
+	if not ready:
+		return _fail("run phase want %.2f got %.3f song %.3f playing %s" % [phase, player.run_cycle_phase(), GameClock.song_time_sec, GameClock.is_playing])
+	return await _grab(path)
 
 
 func _grab_run_frame(player: RunnerController, sprite: AnimatedSprite2D, frame: int, path: String) -> bool:

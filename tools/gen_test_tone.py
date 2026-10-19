@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate a license-clear beat test tone and matching chart notes.
 
-The audio is original sine clicks (public domain / CC0). It is not a
-recording of anyone's music. Re-run from the repo root:
+The BGM is original sine clicks (public domain / CC0). Action sounds are
+short pitched tones in the same key. It is not a recording of anyone's
+music. Re-run from the repo root:
 
     python3 tools/gen_test_tone.py
 """
@@ -67,26 +68,70 @@ def build_bgm() -> list[float]:
     return samples
 
 
+def _add_voice(
+    samples: list[float],
+    t: float,
+    f0: float,
+    f1: float,
+    amp: float,
+    length: float,
+    decay: float,
+    attack: float = 0.010,
+    harm: float = 0.12,
+) -> None:
+    """Soft-attack sine with a short decay. decay is a sample time-constant."""
+    start = int(round(t * RATE))
+    count = max(1, int(round(length * RATE)))
+    attack_n = max(1, int(attack * RATE))
+    release_n = max(1, int(0.006 * RATE))
+    phase = 0.0
+    for i in range(count):
+        idx = start + i
+        if idx < 0 or idx >= len(samples):
+            break
+        u = i / max(1, count - 1)
+        freq = f0 + (f1 - f0) * u
+        phase += 2.0 * math.pi * freq / RATE
+        att = min(1.0, (i + 1) / attack_n)
+        att = att * att * (3.0 - 2.0 * att)
+        rel = 1.0
+        if i > count - release_n:
+            rel = max(0.0, (count - i) / release_n)
+        env = att * math.exp(-i / decay) * rel
+        samples[idx] += math.sin(phase) * amp * env
+        samples[idx] += math.sin(phase * 2.0) * amp * harm * env
+
+
 def build_sfx(kind: str) -> list[float]:
+    # Song clicks sit on E5 / A5 / B5. These stay in that family, quieter, and long enough to hear a pitch.
+    # decay ~700 samples is about 32 ms, so the note rings instead of clicking.
     if kind == "perfect":
-        samples = _silence(0.16)
-        _add_tone(samples, 0.0, 1320.0, 0.45, 0.07, 30.0)
-        _add_tone(samples, 0.07, 1760.0, 0.40, 0.08, 28.0)
+        samples = _silence(0.12)
+        _add_voice(samples, 0.0, 1318.51, 1318.51, 0.16, 0.11, 720.0, harm=0.10)
+        _add_voice(samples, 0.0, 880.00, 880.00, 0.06, 0.09, 640.0, harm=0.08)
         return samples
     if kind == "good":
-        samples = _silence(0.12)
-        _add_tone(samples, 0.0, 880.0, 0.40, 0.10, 34.0)
+        samples = _silence(0.10)
+        _add_voice(samples, 0.0, 880.00, 880.00, 0.14, 0.09, 680.0, harm=0.10)
+        return samples
+    if kind == "miss":
+        samples = _silence(0.13)
+        _add_voice(samples, 0.0, 329.63, 318.00, 0.12, 0.12, 820.0, harm=0.05)
         return samples
     if kind == "kiss":
-        samples = _silence(0.28)
-        _add_tone(samples, 0.0, 740.0, 0.28, 0.08, 40.0)
-        _add_tone(samples, 0.09, 988.0, 0.32, 0.12, 50.0)
-        _add_tone(samples, 0.16, 1318.0, 0.18, 0.10, 40.0)
+        samples = _silence(0.20)
+        _add_voice(samples, 0.0, 880.00, 880.00, 0.10, 0.10, 760.0, harm=0.08)
+        _add_voice(samples, 0.075, 1318.51, 1318.51, 0.09, 0.11, 760.0, harm=0.08)
         return samples
-    samples = _silence(0.16)
-    _add_tone(samples, 0.0, 150.0, 0.50, 0.14, 22.0)
-    _add_tone(samples, 0.0, 90.0, 0.25, 0.12, 18.0)
-    return samples
+    if kind == "jump":
+        samples = _silence(0.09)
+        _add_voice(samples, 0.0, 739.99, 987.77, 0.10, 0.08, 520.0, harm=0.07)
+        return samples
+    if kind == "slide":
+        samples = _silence(0.09)
+        _add_voice(samples, 0.0, 659.25, 440.00, 0.09, 0.08, 520.0, harm=0.06)
+        return samples
+    raise SystemExit(f"unknown sfx {kind}")
 
 
 def _former_block(index: int, t: float) -> bool:
@@ -146,10 +191,19 @@ def _assert_playable(notes: list[dict], buddy_times: list[float], gap: float) ->
                 raise SystemExit(f"buddy gap {note['t']} vs {hit}")
 
 
+SFX_NAMES = ("perfect", "good", "miss", "kiss", "jump", "slide")
+
+
+def write_sfx() -> None:
+    for name in SFX_NAMES:
+        path = SFX_DIR / f"{name}.wav"
+        _write_wav(path, build_sfx(name))
+        print(f"wrote {path} ({path.stat().st_size} bytes)")
+
+
 def main() -> None:
     _write_wav(BGM_PATH, build_bgm())
-    for name in ("perfect", "good", "miss", "kiss"):
-        _write_wav(SFX_DIR / f"{name}.wav", build_sfx(name))
+    write_sfx()
     notes = build_notes()
     chart = {
         "schemaVersion": 2,
