@@ -35,7 +35,7 @@ offset_bottom = 88.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(0.541176, 0.498039, 0.447059, 1)
 theme_override_font_sizes/font_size = 16
-text = "←→ 跑   按住跳   S 滑过花门   Shift 冲刺   靠近布布"
+text = "跟着歌曲自动跑   按住跳   S 滑过花门   靠近布布"
 
 [node name="ScoreLabel" type="Label" parent="Root"]
 layout_mode = 0

@@ -12,7 +12,8 @@ const BUDDY_APPROACH := preload("res://assets/characters/bubu_approach.png")
 const BUDDY_IDLE := preload("res://assets/characters/bubu_idle.png")
 const KISS_SEC := 0.6
 const DEFAULT_WINDOW_MS := 400.0
-const CATCH_RADIUS_X := 110.0
+## 原点到原点的方框。横向大约一只身位再加一点容错，纵向仍允许跳起来亲。
+const CATCH_RADIUS_X := 96.0
 const CATCH_RADIUS_Y := 120.0
 const SIDE_BY_SIDE := 100.0
 const KISS_SCALE := 1.35
@@ -63,6 +64,14 @@ func reset_for_chart() -> void:
 		_buddy.scale = Vector2.ONE
 	if _hud:
 		_hud.show_kiss(false)
+
+
+func catch_center() -> Vector2:
+	return _anchor
+
+
+func catch_debug_visible() -> bool:
+	return _buddy != null and _buddy.visible
 
 
 func within_catch(player_pos: Vector2, anchor: Vector2, song_t: float, hit_t: float) -> bool:

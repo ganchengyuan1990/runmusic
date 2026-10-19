@@ -1,6 +1,6 @@
 extends Node
 ## 听歌打点：谱面草稿、导出、ChartLoader、试玩路径，以及默认开局仍是 song_01。
-## 试玩时一二的横坐标跟歌曲走，点在时刻 T 的音符会落在她脚下。默认局仍是自由跑。
+## 试玩和开始游戏都把一二的横坐标锁在歌曲上，点在时刻 T 的音符会落在她脚下。
 ## 作为场景运行（不要 --script），自动加载才在。
 
 const DraftLib = preload("res://scripts/tools/ChartDraft.gd")
@@ -369,8 +369,8 @@ func _spin_game() -> Dictionary:
 	return {"ok": not song.is_empty(), "song": song, "length": length}
 
 
-## 打点时刻 T 的障碍中心 == x_at_time(T)。试玩锁钟后，一二在这一拍站在障碍上。
-## 跳、滑铲仍生效，按左不会把她从节拍上拉开。默认 song_01 不锁钟。
+## 打点时刻 T 的障碍中心 == x_at_time(T)。锁钟后，一二在这一拍站在障碍上。
+## 跳、滑铲仍生效，按左不会把她从节拍上拉开。开始游戏的 song_01 同样锁钟。
 func _clock_alignment() -> bool:
 	var beat := 4.0
 	var draft = DraftLib.new()
@@ -482,33 +482,77 @@ func _clock_alignment() -> bool:
 	var normal: Node = load("res://scenes/game/Game.tscn").instantiate()
 	get_tree().root.add_child(normal)
 	GameClock.set_process(false)
-	var free_runner: RunnerController = normal.get_node("World/Player")
-	if free_runner.clock_locked:
-		return _clock_fail(normal, "song_01 should stay free-run")
+	var runner: RunnerController = normal.get_node("World/Player")
+	if not runner.clock_locked:
+		return _clock_fail(normal, "song_01 should auto-run on the song clock")
 	if str(ChartLoader.chart.get("songId", "")) != "song_01":
 		return _clock_fail(normal, "default song %s" % ChartLoader.chart.get("songId", ""))
-	for _i in 6:
-		free_runner.force_input(0.0, false, false, false, false)
+	var song_worst := 0.0
+	for i in 17:
+		var t := float(i) * 0.25
+		GameClock.song_time_sec = t
+		runner.force_input(-1.0, false, false, false, true)
 		await get_tree().physics_frame
-	var stay := free_runner.position.x
+		song_worst = maxf(song_worst, absf(runner.position.x - TrackLayout.x_at_time(t)))
+	print("song_01 clock worst=%.3f" % song_worst)
+	if song_worst > 1.0:
+		return _clock_fail(normal, "song_01 auto-run drifted %.2f px" % song_worst)
+	if runner.facing < 0:
+		return _clock_fail(normal, "song_01 left input flipped the auto-run")
+	runner.clear_force()
+	Input.action_press("move_left")
+	Input.action_press("sprint")
 	GameClock.song_time_sec = beat
-	for _i in 8:
-		free_runner.force_input(0.0, false, false, false, false)
+	await get_tree().physics_frame
+	Input.action_release("move_left")
+	Input.action_release("sprint")
+	if absf(runner.position.x - TrackLayout.x_at_time(beat)) > 1.0:
+		return _clock_fail(normal, "holding left pulled song_01 to %s" % runner.position.x)
+	GameClock.song_time_sec = 1.0
+	for _i in 60:
+		runner.force_input(0.0, false, false, false, false)
 		await get_tree().physics_frame
-	if absf(free_runner.position.x - stay) > 1.5:
-		return _clock_fail(normal, "free-run followed the song to %s" % free_runner.position.x)
-	var y_free := free_runner.position.y
-	free_runner.force_input(0.0, true, true, false, false)
+		if runner.is_grounded() and absf(runner.position.y - TrackLayout.stand_y()) < 1.0:
+			break
+	if not runner.is_grounded():
+		return _clock_fail(normal, "song_01 not grounded before jump at %s" % runner.position)
+	var y_song := runner.position.y
+	runner.force_input(-1.0, true, true, false, false)
+	GameClock.song_time_sec = 1.1
 	await get_tree().physics_frame
-	if free_runner.position.y >= y_free - 1.0:
-		return _clock_fail(normal, "free-run jump broken")
-	var before := free_runner.position.x
-	free_runner.force_input(1.0, false, false, false, false)
+	if runner.position.y >= y_song - 1.0:
+		return _clock_fail(normal, "song_01 jump did not rise")
+	if absf(runner.position.x - TrackLayout.x_at_time(1.1)) > 1.0:
+		return _clock_fail(normal, "song_01 jump pulled x off the beat")
+	for _i in 50:
+		GameClock.song_time_sec = 1.2
+		runner.force_input(0.0, false, false, false, false)
+		await get_tree().physics_frame
+		if runner.is_grounded():
+			break
+	if not runner.is_grounded():
+		return _clock_fail(normal, "song_01 did not land after jump")
+	runner.force_input(0.0, false, false, true, false)
+	GameClock.song_time_sec = 2.0
 	await get_tree().physics_frame
-	if free_runner.position.x < before + 2.0:
-		return _clock_fail(normal, "free-run right did not move")
-	if absf(free_runner.position.x - note_x) < 200.0:
-		return _clock_fail(normal, "free-run snapped onto the tapped note")
+	if not runner.is_sliding_now():
+		return _clock_fail(normal, "song_01 slide ignored during auto-run")
+	if absf(runner.position.x - TrackLayout.x_at_time(2.0)) > 1.0:
+		return _clock_fail(normal, "song_01 slide pulled x off the beat")
+	var song_falls := {"n": 0}
+	runner.pit_fallen.connect(func() -> void: song_falls["n"] += 1)
+	GameClock.song_time_sec = 10.0
+	runner.position.y = TrackLayout.KILL_Y + 80.0
+	await get_tree().physics_frame
+	if song_falls["n"] < 1:
+		return _clock_fail(normal, "song_01 pit did not cost a life")
+	for i in 4:
+		GameClock.song_time_sec = 10.0 + float(i) * 0.05
+		await get_tree().physics_frame
+		if absf(runner.position.x - TrackLayout.x_at_time(GameClock.song_time_sec)) > 1.0:
+			return _clock_fail(normal, "song_01 respawn left the clock")
+		if absf(runner.position.y - TrackLayout.stand_y()) > 2.0:
+			return _clock_fail(normal, "song_01 respawn fell back into the pit at %s" % runner.position)
 	GameClock.set_process(true)
 	GameClock.stop()
 	normal.queue_free()
