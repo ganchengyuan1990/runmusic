@@ -23,6 +23,8 @@ const WavLib = preload("res://scripts/audio/WavStream.gd")
 var _lives: int = START_LIVES
 var _ended: bool = false
 var _sfx_streams: Dictionary = {}
+var _sfx_voices: Array[AudioStreamPlayer] = []
+var _sfx_next: int = 0
 var _chart_file := DEFAULT_CHART
 
 
@@ -56,6 +58,10 @@ func _ready() -> void:
 		print("GameRoot: clock-locked run")
 	if runner and not runner.pit_fallen.is_connected(_on_pit):
 		runner.pit_fallen.connect(_on_pit)
+	if runner and not runner.jumped.is_connected(_on_jump):
+		runner.jumped.connect(_on_jump)
+	if runner and not runner.slid.is_connected(_on_slide):
+		runner.slid.connect(_on_slide)
 	if buddy_catch:
 		buddy_catch.reset_for_chart()
 		if not buddy_catch.caught.is_connected(_on_kiss):
@@ -118,20 +124,44 @@ func _load_bgm() -> void:
 		print("GameRoot: BGM %s" % chosen)
 
 
+func has_sfx(result: String) -> bool:
+	return _sfx_streams.has(result)
+
+
 func _load_sfx() -> void:
-	sfx.volume_db = Settings.sfx_volume_db if Settings else 0.0
-	for name in ["perfect", "good", "miss", "kiss"]:
+	_ensure_sfx_voices()
+	var db := Settings.sfx_volume_db if Settings else 0.0
+	for voice in _sfx_voices:
+		voice.volume_db = db
+	# 判定、亲亲、起跳、滑铲都是短音。躲开不发声，避免一串障碍把曲子盖住。
+	for name in ["perfect", "good", "miss", "kiss", "jump", "slide"]:
 		var path := "res://assets/audio/sfx/%s.wav" % name
 		var stream := WavLib.load_file(path)
 		if stream:
 			_sfx_streams[name] = stream
 
 
-func _play_sfx(result: String) -> void:
-	if sfx == null or not _sfx_streams.has(result):
+func _ensure_sfx_voices() -> void:
+	if not _sfx_voices.is_empty():
 		return
-	sfx.stream = _sfx_streams[result]
-	sfx.play()
+	if sfx:
+		_sfx_voices.append(sfx)
+	# 跳和判定经常叠在同一拍，多留两个声部，后一个音不会把前一个掐掉。
+	for i in 2:
+		var voice := AudioStreamPlayer.new()
+		voice.name = "SfxVoice%d" % (i + 2)
+		voice.bus = sfx.bus if sfx else &"Master"
+		add_child(voice)
+		_sfx_voices.append(voice)
+
+
+func _play_sfx(result: String) -> void:
+	if _sfx_voices.is_empty() or not _sfx_streams.has(result):
+		return
+	var voice := _sfx_voices[_sfx_next % _sfx_voices.size()]
+	_sfx_next += 1
+	voice.stream = _sfx_streams[result]
+	voice.play()
 
 
 func _on_judged(result: String, note: Dictionary, _delta_ms: float) -> void:
@@ -153,6 +183,7 @@ func _on_pit() -> void:
 	if hud:
 		hud.set_lives(_lives)
 		hud.flash_judge("掉落")
+	_play_sfx("miss")
 	if _lives <= 0:
 		_end_run()
 		return
@@ -161,6 +192,18 @@ func _on_pit() -> void:
 		spot = park.current_checkpoint(runner.position.x)
 	if runner:
 		runner.respawn_at(spot)
+
+
+func _on_jump() -> void:
+	if _ended:
+		return
+	_play_sfx("jump")
+
+
+func _on_slide() -> void:
+	if _ended:
+		return
+	_play_sfx("slide")
 
 
 func _on_kiss() -> void:

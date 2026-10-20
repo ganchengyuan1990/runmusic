@@ -34,6 +34,15 @@ var _force_slide: bool = false
 var _force_sprint: bool = false
 ## 水平位置跟 GameClock，按谱面 pxPerSec 自动往右。
 var clock_locked: bool = false
+## 一整步（左右脚各落地一次）在 0..1 之间走一圈。锁钟时跟歌曲拍子，否则按跑过的距离。
+var _run_phase: float = 0.0
+
+## 落脚图比节拍稍早换上，新的前脚先伸出来再踩实。
+const RUN_SWITCH_LEAD := 0.08
+## 立绘中心到鞋底。压扁时绕这里补一点，避免脚离地。
+const RUN_FEET_DROP := 54.0
+const RUN_REST_Y := -6.0
+const RUN_SLIDE_Y := 14.0
 
 @onready var _visual: Node2D = $Visual
 
@@ -145,6 +154,7 @@ func _physics_process(delta: float) -> void:
 		# 物理步长和音频钟会漂。直接把脚放到这一拍的世界坐标上，左右和冲刺改不了它。
 		position.x = Layout.x_at_time(GameClock.song_time_sec)
 		velocity.x = speed
+	_sync_run_phase(delta)
 	_update_facing()
 	_update_pose()
 
@@ -212,6 +222,11 @@ func recovery_left() -> float:
 	return _invuln
 
 
+## 当前跑步整步相位。0 和 0.5 是两次落脚，0.25 和 0.75 是腾空。
+func run_cycle_phase() -> float:
+	return _run_phase
+
+
 ## 试玩掉坑后只要人还在缺口上方，就把无敌维持在 min_sec，避免同一拍连扣命。
 func keep_recovery(min_sec: float) -> void:
 	_invuln = maxf(_invuln, min_sec)
@@ -269,18 +284,43 @@ func _update_facing() -> void:
 		_sprite.flip_h = facing < 0
 
 
+## 一整步对齐一拍：120 BPM 时每秒落地 4 次。步长 = pxPerSec / 每秒整步数，所以更快的谱脚步也更大。
+func _run_cycles_per_sec() -> float:
+	var bpm := 120.0
+	if ChartLoader and not ChartLoader.chart.is_empty():
+		bpm = float(ChartLoader.chart.get("bpm", 120.0))
+	return clampf(bpm, 48.0, 240.0) / 60.0
+
+
+func _run_stride_px() -> float:
+	return maxf(Layout.px_per_sec(), 40.0) / _run_cycles_per_sec()
+
+
+func _sync_run_phase(delta: float) -> void:
+	if clock_locked and GameClock.is_playing:
+		_run_phase = fposmod(GameClock.song_time_sec * _run_cycles_per_sec(), 1.0)
+		return
+	var speed := absf(velocity.x)
+	if speed <= 10.0:
+		return
+	_run_phase = fposmod(_run_phase + delta * speed / _run_stride_px(), 1.0)
+
+
 func _update_pose() -> void:
-	if _sprite:
-		_sprite.position.y = 14.0 if _sliding else -6.0
+	var anim := "idle"
 	if _sliding:
-		_play_pose("slide")
+		anim = "slide"
 	elif not is_on_floor():
-		_play_pose("jump")
+		anim = "jump"
 	elif absf(velocity.x) > 10.0:
-		# 脚在地上并且在往左右走就迈腿。不看歌曲时钟，停住才是待机。
+		anim = "run"
+	if anim == "run":
 		_play_pose("run")
+		_apply_run_visual()
 	else:
-		_play_pose("idle")
+		# 跳和滑铲用原来的立绘，不带跑步的压扁和前倾。
+		_reset_run_visual()
+		_play_pose(anim)
 
 
 func _play_pose(anim: String) -> void:
@@ -288,6 +328,53 @@ func _play_pose(anim: String) -> void:
 		return
 	if not _sprite.sprite_frames.has_animation(anim):
 		return
+	if anim == "run":
+		# 帧由相位决定，不跟墙钟自动播，否则会和拍子脱节。
+		if _sprite.animation != "run" or not _sprite.is_playing():
+			_sprite.play("run")
+		_sprite.speed_scale = 0.0
+		return
 	if _sprite.animation == anim and _sprite.is_playing():
 		return
+	_sprite.speed_scale = 1.0
 	_sprite.play(anim)
+
+
+func _apply_run_visual() -> void:
+	if _sprite == null:
+		return
+	var frames := 1
+	if _sprite.sprite_frames:
+		frames = _sprite.sprite_frames.get_frame_count("run")
+	if frames > 1:
+		var shifted := fposmod(_run_phase + RUN_SWITCH_LEAD, 1.0)
+		_sprite.frame = 0 if shifted < 0.5 else 1
+	# 每半步一次落脚：落地压扁，腾空拉长，身体在最高点多停一会。
+	var step := fposmod(_run_phase * 2.0, 1.0)
+	var lift := pow(sin(step * PI), 0.62)
+	var bob := lerpf(2.4, -6.5, lift)
+	var plant := pow(1.0 - lift, 1.7)
+	var sx := lerpf(1.0, 1.08, plant)
+	var sy := lerpf(1.0, 0.88, plant)
+	var stretch := pow(lift, 1.4)
+	sx = lerpf(sx, 0.97, stretch)
+	sy = lerpf(sy, 1.045, stretch)
+	var lean_deg := lerpf(6.5, 3.2, lift)
+	var rot := deg_to_rad(lean_deg) * float(facing)
+	var reach := sin(step * PI) * 2.2 * float(facing)
+	var anchor := pow(1.0 - lift, 1.35)
+	var foot := Vector2(0.0, RUN_FEET_DROP)
+	var planted := Vector2(foot.x * sx, foot.y * sy).rotated(rot)
+	var correction := (foot - planted) * anchor
+	_sprite.rotation = rot
+	_sprite.scale = Vector2(sx, sy)
+	_sprite.position = Vector2(reach, RUN_REST_Y + bob) + correction
+
+
+func _reset_run_visual() -> void:
+	if _sprite == null:
+		return
+	_sprite.rotation = 0.0
+	_sprite.scale = Vector2.ONE
+	_sprite.speed_scale = 1.0
+	_sprite.position = Vector2(0.0, RUN_SLIDE_Y if _sliding else RUN_REST_Y)

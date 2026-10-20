@@ -153,7 +153,7 @@ godot --path . --rendering-method gl_compatibility res://tests/mvp_probe.tscn --
 
 1. **方案 B**：有音频且曲子长于 15 秒时，`song_time` = `get_playback_position()` + `get_time_since_last_mix()` − 缓存的 `get_output_latency()`。短曲用系统钟。两者都减去 `Settings.player_offset_ms` 和谱面 `offsetMs`。  
 2. **曲目**：`song_01.ogg` 优先；否则用谱面 `audio`；再否则用 `song_01_test.wav`。都没有才空跑。  
-3. **音效**：Perfect / Good / Miss / Kiss 播放 `assets/audio/sfx/` 里的短嘀声。  
+3. **音效**：Perfect / Good / Miss / Kiss，以及起跳、滑铲，播放 `assets/audio/sfx/` 里的短音。音高跟着测试曲的 E / A / B，起音软、尾巴短，压在 `song_01_test` 下面。  
 4. **不要**用 `_process(delta)` 累加当主歌曲时间；一律走 `GameClock.song_time_sec`。
 
 官方 Sync with audio：https://docs.godotengine.org/en/stable/tutorials/audio/sync_with_audio.html
